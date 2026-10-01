@@ -6,9 +6,8 @@ import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfigur
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 
 
-@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, HibernateJpaAutoConfiguration.class})
+@SpringBootApplication
 public class TvScoreApplication {
-
 	public static void main(String[] args) {
 		SpringApplication.run(TvScoreApplication.class, args);
 	}
