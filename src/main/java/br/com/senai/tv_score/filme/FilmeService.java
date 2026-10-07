@@ -20,8 +20,8 @@ public class FilmeService {
 
     private final RestTemplate restTemplate;
 
-    public FilmeService() {
-        this.restTemplate = new RestTemplate();
+    public FilmeService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
     }
 
     // Atende ao RF05 (Exibição de filmes em Destaque/Trending)
