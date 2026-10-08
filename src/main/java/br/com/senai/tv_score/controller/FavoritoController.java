@@ -23,35 +23,24 @@ public class FavoritoController {
 
     @GetMapping
     public ResponseEntity<List<FavoritoDTO>> listarFavoritos(@AuthenticationPrincipal Usuario usuario) {
-        List<FavoritoDTO> favoritos = favoritoService.listarFavoritos(usuario);
-        return ResponseEntity.ok(favoritos);
+        return ResponseEntity.ok(favoritoService.listarFavoritos(usuario));
     }
 
     @PostMapping
-    public ResponseEntity<?> adicionarFavorito(
+    public ResponseEntity<FavoritoDTO> adicionarFavorito(
             @AuthenticationPrincipal Usuario usuario,
             @Valid @RequestBody FavoritoDTO dto
     ) {
-        try {
-            FavoritoDTO salvo = favoritoService.adicionarFavorito(usuario, dto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(salvo);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErroResponse(e.getMessage()));
-        }
+        FavoritoDTO salvo = favoritoService.adicionarFavorito(usuario, dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(salvo);
     }
 
     @DeleteMapping("/{filmeSerieId}")
-    public ResponseEntity<?> removerFavorito(
+    public ResponseEntity<Void> removerFavorito(
             @AuthenticationPrincipal Usuario usuario,
             @PathVariable Long filmeSerieId
     ) {
-        try {
-            favoritoService.removerFavorito(usuario, filmeSerieId);
-            return ResponseEntity.noContent().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErroResponse(e.getMessage()));
-        }
+        favoritoService.removerFavorito(usuario, filmeSerieId);
+        return ResponseEntity.noContent().build();
     }
 }

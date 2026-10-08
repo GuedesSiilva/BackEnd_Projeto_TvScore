@@ -30,14 +30,8 @@ public class AuthController {
     }
 
     @PostMapping("/cadastrar")
-    public ResponseEntity<?> cadastrar(@Valid @RequestBody CadastroRequest request) {
-        try {
-            LoginResponse response = authService.cadastrar(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErroResponse(e.getMessage()));
-        }
+    public ResponseEntity<LoginResponse> cadastrar(@Valid @RequestBody CadastroRequest request) {
+        LoginResponse response = authService.cadastrar(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-
 }
