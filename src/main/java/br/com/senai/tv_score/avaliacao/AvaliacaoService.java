@@ -2,10 +2,12 @@ package br.com.senai.tv_score.avaliacao;
 
 import br.com.senai.tv_score.dto.AvaliacaoDTO;
 import br.com.senai.tv_score.usuarios.Usuario;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
+@Service
 public class AvaliacaoService {
 
     private final AvaliacaoRepository avaliacaoRepository;
