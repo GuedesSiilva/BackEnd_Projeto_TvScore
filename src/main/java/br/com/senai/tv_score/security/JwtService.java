@@ -15,7 +15,8 @@ import java.util.Date;
 public class JwtService {
 
     private static final String SECRET_KEY_STR = "tv_score_chave_secreta_super_segura_2026_senai_projeto";
-    private static final long EXPIRATION_TIME = 86400000; // 24 horas em milissegundos
+    private static final long EXPIRATION_TIME =
+            30L * 24 * 60 * 60 * 1000;
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(SECRET_KEY_STR.getBytes(StandardCharsets.UTF_8));
