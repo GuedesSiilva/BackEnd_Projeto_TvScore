@@ -31,3 +31,30 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# ==========================================
+# TV SCORE - SEGURANÇA
+# ==========================================
+
+# Variáveis de ambiente
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Arquivos temporários
+*.tmp
+*.bak
+
+# Configurações locais com possíveis credenciais
+application-local.properties
+application-local.yml
+
+# Chaves e certificados privados
+*.pem
+*.key
+*.p12
+*.pfx
