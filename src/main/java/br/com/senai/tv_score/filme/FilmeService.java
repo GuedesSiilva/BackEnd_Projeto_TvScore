@@ -311,10 +311,10 @@ public class FilmeService {
                 .queryParam("page", pagina);
     }
 
-    private TmdbResponseDTO executarBusca(UriComponentsBuilder builder) {
-        URI uri = builder.build().encode().toUri();
-
-        return restTemplate.getForObject(uri, TmdbResponseDTO.class);
+    private TmdbResponseDTO executarBusca(
+            UriComponentsBuilder builder
+    ) {
+        return consultarLista(builder, TipoConteudo.MOVIE);
     }
 
     // Lista os serviços disponíveis para filmes no Brasil.
