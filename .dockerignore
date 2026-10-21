@@ -1,0 +1,39 @@
+# ==========================================
+# TV SCORE - DOCKERIGNORE
+# ==========================================
+
+# Arquivos gerados pelo Maven
+target/
+*.class
+.mvn/
+
+# Configurações das IDEs
+.idea/
+.vscode/
+*.iml
+
+# Arquivos do Git
+.git/
+.gitignore
+
+# Arquivos de log
+*.log
+logs/
+
+# Variáveis de ambiente e credenciais
+.env
+.env.*
+!.env.example
+
+# Arquivos temporários do sistema
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
+
+# Arquivos desnecessários para o build
+README.md
+
+# Arquivos de configuração local
+application-local.properties
+application-local.yml
