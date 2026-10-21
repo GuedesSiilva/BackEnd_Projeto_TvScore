@@ -1,11 +1,12 @@
 package br.com.senai.tv_score.avaliacao;
 
 import br.com.senai.tv_score.dto.AvaliacaoDTO;
+import br.com.senai.tv_score.filme.TipoConteudo;
 import br.com.senai.tv_score.usuarios.Usuario;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class AvaliacaoService {
@@ -16,68 +17,80 @@ public class AvaliacaoService {
         this.avaliacaoRepository = avaliacaoRepository;
     }
 
-    public List<AvaliacaoDTO> listarPorFilme (Long filmeSerieId) {
-        return avaliacaoRepository.findByFilmeSerieId(filmeSerieId)
+    @Transactional(readOnly = true)
+    public List<AvaliacaoDTO> listarPorFilme(
+            Long filmeSerieId,
+            TipoConteudo tipoConteudo
+    ) {
+        return avaliacaoRepository
+                .findByFilmeSerieIdAndTipoConteudo(
+                        filmeSerieId,
+                        tipoConteudo
+                )
                 .stream()
-                .map(a -> new AvaliacaoDTO(
-                        a.getId(),
-                        a.getFilmeSerieId(),
-                        a.getNota(),
-                        a.getComentario(),
-                        a.getUsuario().getNome(),
-                        a.getDataCriacao()
-                ))
+                .map(this::paraDTO)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<AvaliacaoDTO> listarPorUsuario(Usuario usuario) {
         return avaliacaoRepository.findByUsuario(usuario)
                 .stream()
-                .map(a -> new AvaliacaoDTO(
-                        a.getId(),
-                        a.getFilmeSerieId(),
-                        a.getNota(),
-                        a.getComentario(),
-                        a.getUsuario().getNome(),
-                        a.getDataCriacao()
-                ))
+                .map(this::paraDTO)
                 .toList();
     }
 
-
+    @Transactional
     public AvaliacaoDTO avaliar(Usuario usuario, AvaliacaoDTO dto) {
-        Optional<Avaliacao> avaliacaoExistente = avaliacaoRepository
-                .findByUsuarioAndFilmeSerieId(usuario, dto.filmeSerieId());
+        Avaliacao avaliacao = avaliacaoRepository
+                .findByUsuarioAndFilmeSerieIdAndTipoConteudo(
+                        usuario,
+                        dto.filmeSerieId(),
+                        dto.tipoConteudo()
+                )
+                .orElseGet(() -> new Avaliacao(
+                        usuario,
+                        dto.filmeSerieId(),
+                        dto.nota(),
+                        dto.comentario(),
+                        dto.tipoConteudo()
+                ));
 
-        Avaliacao avaliacao;
-        if (avaliacaoExistente.isPresent()) {
-            avaliacao = avaliacaoExistente.get();
-            avaliacao.setNota(dto.nota());
-            avaliacao.setComentario(dto.comentario());
-        } else {
-            avaliacao = new Avaliacao(usuario, dto.filmeSerieId(), dto.nota(), dto.comentario());
-        }
+        avaliacao.setNota(dto.nota());
+        avaliacao.setComentario(dto.comentario());
 
         Avaliacao salva = avaliacaoRepository.save(avaliacao);
 
-        return new AvaliacaoDTO(
-                salva.getId(),
-                salva.getFilmeSerieId(),
-                salva.getNota(),
-                salva.getComentario(),
-                salva.getUsuario().getNome(),
-                salva.getDataCriacao()
-        );
+        return paraDTO(salva);
     }
 
+    @Transactional
     public void removerAvaliacao(Usuario usuario, Long id) {
         Avaliacao avaliacao = avaliacaoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Avaliação não encontrada."));
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Avaliação não encontrada."
+                        )
+                );
 
         if (!avaliacao.getUsuario().getId().equals(usuario.getId())) {
-            throw new IllegalArgumentException("Você não tem permissão para remover esta avaliação.");
+            throw new IllegalArgumentException(
+                    "Você não tem permissão para remover esta avaliação."
+            );
         }
 
         avaliacaoRepository.delete(avaliacao);
+    }
+
+    private AvaliacaoDTO paraDTO(Avaliacao avaliacao) {
+        return new AvaliacaoDTO(
+                avaliacao.getId(),
+                avaliacao.getFilmeSerieId(),
+                avaliacao.getNota(),
+                avaliacao.getComentario(),
+                avaliacao.getUsuario().getNome(),
+                avaliacao.getDataCriacao(),
+                avaliacao.getTipoConteudo()
+        );
     }
 }

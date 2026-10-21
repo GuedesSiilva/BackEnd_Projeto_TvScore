@@ -28,9 +28,13 @@ public class FilmeController {
 
     // Rota: GET /api/filmes/pesquisar?q=Batman
     @GetMapping("/pesquisar")
-    public ResponseEntity<TmdbResponseDTO> pesquisarFilmes(@RequestParam("q") String query) {
-        TmdbResponseDTO response = filmeService.pesquisarFilmes(query);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<TmdbResponseDTO> pesquisarFilmes(
+            @RequestParam("q") String query,
+            @RequestParam(name = "pagina", defaultValue = "1") int pagina
+    ) {
+        return ResponseEntity.ok(
+                filmeService.pesquisarFilmes(query, pagina)
+        );
     }
 
     // Rota: GET /api/filmes/123

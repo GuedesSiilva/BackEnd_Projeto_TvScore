@@ -1,7 +1,9 @@
-package br.com.senai.tv_score.favorito;
+package br.com.senai.tv_score.controller;
 
 import br.com.senai.tv_score.dto.FavoritoDTO;
 import br.com.senai.tv_score.exceptions.ErroResponse;
+import br.com.senai.tv_score.favorito.FavoritoService;
+import br.com.senai.tv_score.filme.TipoConteudo;
 import br.com.senai.tv_score.usuarios.Usuario;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -38,9 +40,15 @@ public class FavoritoController {
     @DeleteMapping("/{filmeSerieId}")
     public ResponseEntity<Void> removerFavorito(
             @AuthenticationPrincipal Usuario usuario,
-            @PathVariable Long filmeSerieId
+            @PathVariable Long filmeSerieId,
+            @RequestParam("tipoConteudo") TipoConteudo tipoConteudo
     ) {
-        favoritoService.removerFavorito(usuario, filmeSerieId);
+        favoritoService.removerFavorito(
+                usuario,
+                filmeSerieId,
+                tipoConteudo
+        );
+
         return ResponseEntity.noContent().build();
     }
 }

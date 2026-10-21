@@ -1,5 +1,6 @@
 package br.com.senai.tv_score.dto;
 
+import br.com.senai.tv_score.filme.TipoConteudo;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -21,6 +22,9 @@ public record AvaliacaoDTO(
 
         String nomeUsuario,
 
-        LocalDateTime dataCriacao
+        LocalDateTime dataCriacao,
+
+        @NotNull(message = "O tipo do conteúdo é obrigatório")
+        TipoConteudo tipoConteudo
 ) {
 }

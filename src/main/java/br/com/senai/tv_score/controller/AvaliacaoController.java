@@ -5,6 +5,7 @@ import br.com.senai.tv_score.avaliacao.Avaliacao;
 import br.com.senai.tv_score.avaliacao.AvaliacaoService;
 import br.com.senai.tv_score.dto.AvaliacaoDTO;
 import br.com.senai.tv_score.exceptions.ErroResponse;
+import br.com.senai.tv_score.filme.TipoConteudo;
 import br.com.senai.tv_score.usuarios.Usuario;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -25,8 +26,16 @@ public class AvaliacaoController {
     }
 
     @GetMapping("/filme/{filmeSerieId}")
-    public ResponseEntity<List<AvaliacaoDTO>> listarPorFilme(@PathVariable Long filmeSerieId) {
-        return ResponseEntity.ok(avaliacaoService.listarPorFilme(filmeSerieId));
+    public ResponseEntity<List<AvaliacaoDTO>> listarPorFilme(
+            @PathVariable Long filmeSerieId,
+            @RequestParam("tipoConteudo") TipoConteudo tipoConteudo
+    ) {
+        return ResponseEntity.ok(
+                avaliacaoService.listarPorFilme(
+                        filmeSerieId,
+                        tipoConteudo
+                )
+        );
     }
 
     @GetMapping("/minhas")

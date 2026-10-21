@@ -1,6 +1,7 @@
 package br.com.senai.tv_score.favorito;
 
 import br.com.senai.tv_score.dto.FavoritoDTO;
+import br.com.senai.tv_score.filme.TipoConteudo;
 import br.com.senai.tv_score.usuarios.Usuario;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,29 +17,68 @@ public class FavoritoService {
         this.favoritoRepository = favoritoRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<FavoritoDTO> listarFavoritos(Usuario usuario) {
         return favoritoRepository.findByUsuario(usuario)
                 .stream()
-                .map(f -> new FavoritoDTO(f.getId(), f.getFilmeSerieId(), f.getDataAdicionado()))
+                .map(this::paraDTO)
                 .toList();
     }
 
+    @Transactional
     public FavoritoDTO adicionarFavorito(Usuario usuario, FavoritoDTO dto) {
-        if (favoritoRepository.existsByUsuarioAndFilmeSerieId(usuario, dto.filmeSerieId())) {
-            throw new IllegalArgumentException("Filme/Série já está nos favoritos.");
+        boolean existente = favoritoRepository
+                .existsByUsuarioAndFilmeSerieIdAndTipoConteudo(
+                        usuario,
+                        dto.filmeSerieId(),
+                        dto.tipoConteudo()
+                );
+
+        if (existente) {
+            throw new IllegalArgumentException(
+                    "Filme/Série já está nos favoritos."
+            );
         }
 
-        Favorito novoFavorito = new Favorito(usuario, dto.filmeSerieId());
-        Favorito salvo = favoritoRepository.save(novoFavorito);
+        Favorito favorito = new Favorito(
+                usuario,
+                dto.filmeSerieId(),
+                dto.tipoConteudo()
+        );
 
-        return new FavoritoDTO(salvo.getId(), salvo.getFilmeSerieId(), salvo.getDataAdicionado());
+        return paraDTO(favoritoRepository.save(favorito));
     }
 
     @Transactional
-    public void removerFavorito(Usuario usuario, Long filmeSerieId) {
-        if (!favoritoRepository.existsByUsuarioAndFilmeSerieId(usuario, filmeSerieId)) {
+    public void removerFavorito(
+            Usuario usuario,
+            Long filmeSerieId,
+            TipoConteudo tipoConteudo
+    ) {
+        boolean existente = favoritoRepository
+                .existsByUsuarioAndFilmeSerieIdAndTipoConteudo(
+                        usuario,
+                        filmeSerieId,
+                        tipoConteudo
+                );
+
+        if (!existente) {
             throw new IllegalArgumentException("Favorito não encontrado.");
         }
-        favoritoRepository.deleteByUsuarioAndFilmeSerieId(usuario, filmeSerieId);
+
+        favoritoRepository.deleteByUsuarioAndFilmeSerieIdAndTipoConteudo(
+                usuario,
+                filmeSerieId,
+                tipoConteudo
+        );
+    }
+
+    private FavoritoDTO paraDTO(Favorito favorito) {
+        return new FavoritoDTO(
+                favorito.getId(),
+                favorito.getFilmeSerieId(),
+                favorito.getDataAdicionado(),
+                favorito.getTipoConteudo()
+        );
     }
 }

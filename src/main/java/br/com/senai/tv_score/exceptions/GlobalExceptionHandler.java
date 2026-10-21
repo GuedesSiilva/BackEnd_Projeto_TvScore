@@ -36,4 +36,17 @@ public class GlobalExceptionHandler {
                 .body(new ErroResponse("Ocorreu um erro interno no servidor."));
     }
 
+    @ExceptionHandler(
+            org.springframework.web.server.ResponseStatusException.class
+    )
+    public ResponseEntity<ErroResponse> handleResponseStatusException(
+            org.springframework.web.server.ResponseStatusException ex
+    ) {
+        String mensagem = ex.getReason() != null
+                ? ex.getReason()
+                : "Não foi possível concluir a requisição.";
+
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(new ErroResponse(mensagem));
+    }
 }

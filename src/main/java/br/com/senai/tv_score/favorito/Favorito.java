@@ -1,5 +1,6 @@
 package br.com.senai.tv_score.favorito;
 
+import br.com.senai.tv_score.filme.TipoConteudo;
 import br.com.senai.tv_score.usuarios.Usuario;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,7 +11,16 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "favorito")
+@Table(name = "favorito", uniqueConstraints = {
+        @UniqueConstraint(
+                name = "uk_favorito_usuario_conteudo",
+                columnNames = {
+                        "usuario_id",
+                        "filme_serie_id",
+                        "tipo_conteudo"
+                }
+        )
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -30,8 +40,17 @@ public class Favorito {
     @Column(name = "data_adicionado", updatable = false)
     private LocalDateTime dataAdicionado;
 
-    public Favorito(Usuario usuario, Long filmeSerieId) {
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_conteudo", nullable = false)
+    private TipoConteudo tipoConteudo;
+
+    public Favorito(
+            Usuario usuario,
+            Long filmeSerieId,
+            TipoConteudo tipoConteudo
+    ) {
         this.usuario = usuario;
         this.filmeSerieId = filmeSerieId;
+        this.tipoConteudo = tipoConteudo;
     }
 }
