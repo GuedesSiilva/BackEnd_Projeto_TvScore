@@ -25,6 +25,9 @@ public record ResultadoPesquisaTmdbDTO(
         @JsonProperty("poster_path")
         String posterPath,
 
+        @JsonProperty("backdrop_path")
+        String backdropPath,
+
         @JsonProperty("genre_ids")
         List<Integer> genreIds,
 
@@ -52,6 +55,7 @@ public record ResultadoPesquisaTmdbDTO(
                 voteAverage,
                 filme ? releaseDate : firstAirDate,
                 posterPath,
+                backdropPath,
                 genreIds,
                 filme ? TipoConteudo.MOVIE : TipoConteudo.TV
         );

@@ -24,6 +24,9 @@ public record FilmeDTO(
         @JsonProperty("poster_path")
         String posterPath,
 
+        @JsonProperty("backdrop_path")
+        String backdropPath,
+
         @JsonProperty("genre_ids")
         List<Integer> genreIds,
 
@@ -37,6 +40,7 @@ public record FilmeDTO(
                 voteAverage,
                 releaseDate,
                 posterPath,
+                backdropPath,
                 genreIds,
                 tipo
         );
