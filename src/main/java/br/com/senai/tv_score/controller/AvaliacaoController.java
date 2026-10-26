@@ -4,6 +4,7 @@ package br.com.senai.tv_score.controller;
 import br.com.senai.tv_score.avaliacao.Avaliacao;
 import br.com.senai.tv_score.avaliacao.AvaliacaoService;
 import br.com.senai.tv_score.dto.AvaliacaoDTO;
+import br.com.senai.tv_score.dto.ResumoAvaliacaoDTO;
 import br.com.senai.tv_score.exceptions.ErroResponse;
 import br.com.senai.tv_score.filme.TipoConteudo;
 import br.com.senai.tv_score.usuarios.Usuario;
@@ -58,5 +59,18 @@ public class AvaliacaoController {
     ) {
         avaliacaoService.removerAvaliacao(usuario, id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/conteudo/{filmeSerieId}/resumo")
+    public ResponseEntity<ResumoAvaliacaoDTO> buscarResumo(
+            @PathVariable("filmeSerieId") Long filmeSerieId,
+            @RequestParam("tipoConteudo") TipoConteudo tipoConteudo
+    ) {
+        return ResponseEntity.ok(
+                avaliacaoService.buscarResumo(
+                        filmeSerieId,
+                        tipoConteudo
+                )
+        );
     }
 }

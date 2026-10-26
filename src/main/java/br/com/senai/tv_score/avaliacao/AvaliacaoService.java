@@ -1,6 +1,7 @@
 package br.com.senai.tv_score.avaliacao;
 
 import br.com.senai.tv_score.dto.AvaliacaoDTO;
+import br.com.senai.tv_score.dto.ResumoAvaliacaoDTO;
 import br.com.senai.tv_score.filme.TipoConteudo;
 import br.com.senai.tv_score.usuarios.Usuario;
 import org.springframework.stereotype.Service;
@@ -91,6 +92,37 @@ public class AvaliacaoService {
                 avaliacao.getUsuario().getNome(),
                 avaliacao.getDataCriacao(),
                 avaliacao.getTipoConteudo()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public ResumoAvaliacaoDTO buscarResumo(
+            Long filmeSerieId,
+            TipoConteudo tipoConteudo
+    ) {
+        if (filmeSerieId == null || filmeSerieId <= 0) {
+            throw new IllegalArgumentException(
+                    "O ID do conteúdo deve ser positivo."
+            );
+        }
+
+        if (tipoConteudo == null) {
+            throw new IllegalArgumentException(
+                    "O tipo do conteúdo é obrigatório."
+            );
+        }
+
+        AvaliacaoRepository.ResumoNotas resumo =
+                avaliacaoRepository.buscarResumo(
+                        filmeSerieId,
+                        tipoConteudo
+                );
+
+        return new ResumoAvaliacaoDTO(
+                filmeSerieId,
+                tipoConteudo,
+                resumo.getMedia(),
+                resumo.getTotalAvaliacoes()
         );
     }
 }

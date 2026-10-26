@@ -141,9 +141,9 @@ public class FilmeService {
                 .encode()
                 .toUri();
 
-        FilmeDTO resposta = restTemplate.getForObject(
+        DetalhesTmdbDTO resposta = restTemplate.getForObject(
                 uri,
-                FilmeDTO.class
+                DetalhesTmdbDTO.class
         );
 
         if (resposta == null) {
@@ -153,19 +153,7 @@ public class FilmeService {
             );
         }
 
-        return resposta.comTipo(tipo);
-    }
-
-    public GeneroResponseDTO listarGeneros() {
-        URI uri = UriComponentsBuilder
-                .fromUriString(apiUrl + "/genre/movie/list")
-                .queryParam("api_key", apiKey)
-                .queryParam("language", language)
-                .build()
-                .encode()
-                .toUri();
-
-        return restTemplate.getForObject(uri, GeneroResponseDTO.class);
+        return resposta.paraFilmeDTO(tipo);
     }
 
     // Mantém a rota antiga de filmes funcionando.
@@ -447,5 +435,26 @@ public class FilmeService {
                 resposta.totalPages(),
                 resposta.totalResults()
         );
+    }
+
+    public GeneroResponseDTO listarGeneros() {
+        URI uri = criarConsultaTmdb("/genre/movie/list")
+                .build()
+                .encode()
+                .toUri();
+
+        GeneroResponseDTO resposta = restTemplate.getForObject(
+                uri,
+                GeneroResponseDTO.class
+        );
+
+        if (resposta == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "O TMDB retornou uma resposta vazia."
+            );
+        }
+
+        return resposta;
     }
 }
