@@ -6,6 +6,9 @@ import br.com.senai.tv_score.filme.TipoConteudo;
 import br.com.senai.tv_score.usuarios.Usuario;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import br.com.senai.tv_score.dto.AtualizarAvaliacaoDTO;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -124,5 +127,48 @@ public class AvaliacaoService {
                 resumo.getMedia(),
                 resumo.getTotalAvaliacoes()
         );
+    }
+    @Transactional
+    public AvaliacaoDTO atualizar(
+            Usuario usuario,
+            Long id,
+            AtualizarAvaliacaoDTO dto
+    ) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException(
+                    "O ID da avaliação deve ser positivo."
+            );
+        }
+
+        if (dto.nota() == null
+                || !Double.isFinite(dto.nota())
+                || dto.nota() < 0
+                || dto.nota() > 10) {
+            throw new IllegalArgumentException(
+                    "Informe uma nota entre 0 e 10."
+            );
+        }
+
+        Avaliacao avaliacao = avaliacaoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Avaliação não encontrada."
+                ));
+
+        if (!avaliacao.getUsuario().getId().equals(usuario.getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Você não tem permissão para editar esta avaliação."
+            );
+        }
+
+        avaliacao.setNota(dto.nota());
+        avaliacao.setComentario(
+                dto.comentario() == null
+                        ? null
+                        : dto.comentario().strip()
+        );
+
+        return paraDTO(avaliacao);
     }
 }

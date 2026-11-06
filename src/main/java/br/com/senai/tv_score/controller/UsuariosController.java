@@ -1,36 +1,38 @@
 package br.com.senai.tv_score.controller;
 
-import br.com.senai.tv_score.auth.AuthService;
 import br.com.senai.tv_score.auth.UsuarioLogadoResponse;
-import br.com.senai.tv_score.exceptions.ErroResponse;
+import br.com.senai.tv_score.dto.AtualizarUsuarioDTO;
 import br.com.senai.tv_score.usuarios.Usuario;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import br.com.senai.tv_score.usuarios.UsuarioService;
+import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/usuarios")
 public class UsuariosController {
 
-    private final AuthService authService;
+    private final UsuarioService usuarioService;
 
-    public UsuariosController(AuthService authService){
-        this.authService = authService;
+    public UsuariosController(UsuarioService usuarioService) {
+        this.usuarioService = usuarioService;
     }
 
     @GetMapping("/eu")
-    public ResponseEntity<?> usuarioLogado(@AuthenticationPrincipal Usuario usuario) {
-        if (usuario == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErroResponse("Usuário não autenticado."));
-        }
-
-        return ResponseEntity.ok(new UsuarioLogadoResponse(
+    public UsuarioLogadoResponse usuarioLogado(
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        return new UsuarioLogadoResponse(
                 usuario.getNome(),
                 usuario.getEmail()
-        ));
+        );
+    }
+
+    @PutMapping("/eu")
+    public UsuarioLogadoResponse atualizarUsuario(
+            @AuthenticationPrincipal Usuario usuario,
+            @Valid @RequestBody AtualizarUsuarioDTO dto
+    ) {
+        return usuarioService.atualizar(usuario, dto);
     }
 }
