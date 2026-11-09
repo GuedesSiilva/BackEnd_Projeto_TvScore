@@ -28,13 +28,17 @@ public record FilmeDTO(
         @JsonProperty("backdrop_path")
         String backdropPath,
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         @JsonProperty("genre_ids")
         List<Integer> genreIds,
 
         TipoConteudo tipoConteudo,
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        OndeAssistirDTO ondeAssistir
+        OndeAssistirDTO ondeAssistir,
+
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        List<String> genres
 ) {
 
         public FilmeDTO(
@@ -50,7 +54,8 @@ public record FilmeDTO(
         ) {
                 this(
                         id, title, overview, voteAverage, releaseDate,
-                        posterPath, backdropPath, genreIds, tipoConteudo, null
+                        posterPath, backdropPath, genreIds, tipoConteudo,
+                        null, null
                 );
         }
 
@@ -65,7 +70,8 @@ public record FilmeDTO(
                         backdropPath,
                         genreIds,
                         tipo,
-                        ondeAssistir
+                        ondeAssistir,
+                        genres
                 );
         }
 }

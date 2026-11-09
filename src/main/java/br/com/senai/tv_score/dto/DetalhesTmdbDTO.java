@@ -37,13 +37,12 @@ public record DetalhesTmdbDTO(
 ) {
 
     public FilmeDTO paraFilmeDTO(TipoConteudo tipoConteudo) {
-        List<Integer> idsGeneros = genres == null
+        List<String> nomesGeneros = genres == null
                 ? List.of()
                 : genres.stream()
                 .filter(Objects::nonNull)
-                .map(GeneroDTO::id)
-                .filter(Objects::nonNull)
-                .map(idGenero -> Math.toIntExact(idGenero))
+                .map(GeneroDTO::name)
+                .filter(nome -> nome != null && !nome.isBlank())
                 .toList();
 
         OndeAssistirDTO brasil = disponibilidade == null
@@ -59,9 +58,10 @@ public record DetalhesTmdbDTO(
                 releaseDate,
                 posterPath,
                 backdropPath,
-                idsGeneros,
+                null, // Omite genre_ids nos detalhes
                 tipoConteudo,
-                brasil
+                brasil,
+                nomesGeneros
         );
     }
 }

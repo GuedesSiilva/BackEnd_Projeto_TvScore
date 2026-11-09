@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import br.com.senai.tv_score.dto.AtualizarAvaliacaoDTO;
 
 import java.util.List;
 
@@ -52,6 +53,17 @@ public class AvaliacaoController {
         AvaliacaoDTO salva = avaliacaoService.avaliar(usuario, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(salva);
     }
+    @PutMapping("/{id}")
+    public ResponseEntity<AvaliacaoDTO> atualizarAvaliacao(
+            @AuthenticationPrincipal Usuario usuario,
+            @PathVariable("id") Long id,
+            @Valid @RequestBody AtualizarAvaliacaoDTO dto
+    ) {
+        return ResponseEntity.ok(
+                avaliacaoService.atualizar(usuario, id, dto)
+        );
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> removerAvaliacao(
             @AuthenticationPrincipal Usuario usuario,
