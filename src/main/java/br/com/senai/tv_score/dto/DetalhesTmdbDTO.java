@@ -30,7 +30,10 @@ public record DetalhesTmdbDTO(
         @JsonProperty("backdrop_path")
         String backdropPath,
 
-        List<GeneroDTO> genres
+        List<GeneroDTO> genres,
+
+        @JsonProperty("watch/providers")
+        OndeAssistirDTO.RespostaTmdb disponibilidade
 ) {
 
     public FilmeDTO paraFilmeDTO(TipoConteudo tipoConteudo) {
@@ -43,6 +46,11 @@ public record DetalhesTmdbDTO(
                 .map(idGenero -> Math.toIntExact(idGenero))
                 .toList();
 
+        OndeAssistirDTO brasil = disponibilidade == null
+                || disponibilidade.results() == null
+                ? null
+                : disponibilidade.results().get("BR");
+
         return new FilmeDTO(
                 id,
                 title,
@@ -52,7 +60,8 @@ public record DetalhesTmdbDTO(
                 posterPath,
                 backdropPath,
                 idsGeneros,
-                tipoConteudo
+                tipoConteudo,
+                brasil
         );
     }
 }

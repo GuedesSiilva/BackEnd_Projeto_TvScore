@@ -137,6 +137,7 @@ public class FilmeService {
                 : "/tv/";
 
         URI uri = criarConsultaTmdb(caminho + id)
+                .queryParam("append_to_response", "watch/providers")
                 .build()
                 .encode()
                 .toUri();
