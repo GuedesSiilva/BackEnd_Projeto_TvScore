@@ -1,8 +1,32 @@
-# TV Score — Backend
+<div align="center">
+  <img src="https://raw.githubusercontent.com/victorbispoo/tvScoreFrontFlutter/1beefd9c7c7db9ed5963d6ee073c3e7b3be7f45a/lib/assets/tvScoreLogin.png" alt="Logo do TV Score" width="180" />
+
+  <h1>TV Score · Backend</h1>
+
+  <p><strong>A API por trás da sua próxima história favorita.</strong></p>
+  <p>Catálogo de filmes e séries, avaliações e favoritos para o aplicativo TV Score.</p>
+
+  <img src="https://img.shields.io/badge/Java-21-091426?style=flat-square" alt="Java 21" />
+  <img src="https://img.shields.io/badge/Spring_Boot-4.1.1-6DB33F?style=flat-square&logo=springboot&logoColor=white" alt="Spring Boot 4.1.1" />
+  <img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white" alt="MySQL" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/TMDB-01B4E4?style=flat-square" alt="TMDB" />
+
+  <p>
+    <a href="https://tvscore-backend.onrender.com/swagger-ui/index.html">Swagger</a>
+    · <a href="#executar-localmente">Como rodar</a>
+    · <a href="#rotas-principais">Rotas da API</a>
+    · <a href="https://github.com/victorbispoo/tvScoreFrontFlutter">Frontend Flutter</a>
+  </p>
+</div>
+
+---
+
+## Sobre o projeto
 
 API REST do **TV Score**, aplicativo Flutter para descobrir, avaliar e favoritar filmes e séries. O backend consulta o TMDB para obter dados do catálogo e usa MySQL para persistir contas, preferências, favoritos e avaliações.
 
-## Funcionalidades
+## O que a API oferece
 
 - Pesquisa de filmes e séries na mesma rota, com nomes dos gêneros nos resultados e nos detalhes.
 - Catálogo, destaques e filtros por gênero, nota, ano e serviço de streaming.
@@ -13,7 +37,14 @@ API REST do **TV Score**, aplicativo Flutter para descobrir, avaliar e favoritar
 
 ## Tecnologias
 
-Java 21, Spring Boot 4.1.1, Spring MVC, Spring Security, Spring Data JPA, MySQL, Maven, Docker, Swagger/OpenAPI e TMDB.
+| Tecnologia | Uso no projeto |
+| --- | --- |
+| Java 21 e Spring Boot | Aplicação e rotas da API REST |
+| Spring Security e JWT | Login, autenticação e controle de acesso |
+| Spring Data JPA e MySQL | Persistência de contas, preferências, favoritos e avaliações |
+| TMDB | Catálogo, detalhes, episódios e dados de streaming |
+| Swagger e OpenAPI | Documentação interativa da API |
+| Maven Wrapper e Docker | Build, testes e execução em contêiner |
 
 ## Executar localmente
 
@@ -103,17 +134,24 @@ Exemplo de corpo para `POST /api/avaliacoes`:
 }
 ```
 
-## Estrutura do código
+## Organização do código
 
-A aplicação fica em `src/main/java/br/com/senai/tv_score`.
-
-| Pacote | Responsabilidade |
-|---|---|
-| `controller` | Rotas HTTP do catálogo, perfil, episódios, favoritos e avaliações. |
-| `filme` | Consultas ao TMDB e tratamento de dados do catálogo e de episódios. |
-| `auth` e `security` | Cadastro, login, JWT e controle de acesso. |
-| `usuarios`, `favorito` e `avaliacao` | Regras e persistência dos dados dos usuários. |
-| `dto`, `config` e `exceptions` | Contratos JSON, configuração e tratamento de erros. |
+```text
+src/main/
+├── java/br/com/senai/tv_score/
+│   ├── auth/        # Cadastro e login
+│   ├── security/    # JWT e controle de acesso
+│   ├── controller/  # Rotas HTTP
+│   ├── filme/       # Catálogo do TMDB e episódios
+│   ├── usuarios/    # Perfil e preferências
+│   ├── favorito/    # Favoritos por usuário
+│   ├── avaliacao/   # Notas, comentários e resumo
+│   ├── dto/         # Contratos JSON
+│   ├── config/      # CORS, OpenAPI e cliente HTTP
+│   └── exceptions/  # Respostas de erro
+└── resources/
+    └── application.properties
+```
 
 ## Testes e empacotamento
 
@@ -127,3 +165,7 @@ Em Linux ou macOS, substitua `.\mvnw.cmd` por `./mvnw`. O teste de carregamento 
 ## Créditos de dados
 
 Metadados de filmes, séries e episódios: [The Movie Database (TMDB)](https://www.themoviedb.org/). Dados de disponibilidade de streaming: [JustWatch](https://www.justwatch.com/br), via TMDB.
+
+---
+
+<p align="center"><strong>TV Score</strong> · Backend do aplicativo Flutter.</p>

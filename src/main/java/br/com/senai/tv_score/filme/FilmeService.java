@@ -179,8 +179,7 @@ public class FilmeService {
 
         TmdbResponseDTO series = buscarPorGenero(
                 genero.getGeneroSerieId(),
-                TipoConteudo.TV,
-                pagina
+                TipoConteudo.TV,                pagina
         );
 
         List<FilmeDTO> resultados = new ArrayList<>();
