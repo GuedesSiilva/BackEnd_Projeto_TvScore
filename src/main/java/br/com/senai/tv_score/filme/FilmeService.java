@@ -7,7 +7,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
-
+import java.time.Duration;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -96,7 +100,13 @@ public class FilmeService {
         List<FilmeDTO> resultados = resultadosOriginais.stream()
                 .filter(Objects::nonNull)
                 .filter(ResultadoPesquisaTmdbDTO::ehFilmeOuSerie)
-                .map(ResultadoPesquisaTmdbDTO::paraFilmeDTO)
+                .map(resultado -> {
+                    TipoConteudo tipo = "tv".equals(resultado.mediaType())
+                            ? TipoConteudo.TV
+                            : TipoConteudo.MOVIE;
+
+                    return resultado.paraFilmeDTO(buscarNomesGeneros(tipo));
+                })
                 .toList();
 
         return new TmdbResponseDTO(
@@ -457,5 +467,53 @@ public class FilmeService {
         }
 
         return resposta;
+    }
+    private record GenerosEmCache(
+            Map<Integer, String> nomes,
+            Instant expiraEm
+    ) {}
+
+    private final Map<TipoConteudo, GenerosEmCache> cacheGeneros =
+            new ConcurrentHashMap<>();
+
+    private Map<Integer, String> buscarNomesGeneros(TipoConteudo tipo) {
+        GenerosEmCache atual = cacheGeneros.get(tipo);
+        if (atual != null && atual.expiraEm().isAfter(Instant.now())) {
+            return atual.nomes();
+        }
+
+        return cacheGeneros.compute(tipo, (chave, anterior) -> {
+            if (anterior != null && anterior.expiraEm().isAfter(Instant.now())) {
+                return anterior;
+            }
+
+            String caminho = chave == TipoConteudo.MOVIE
+                    ? "/genre/movie/list"
+                    : "/genre/tv/list";
+
+            URI uri = criarConsultaTmdb(caminho).build().encode().toUri();
+            GeneroResponseDTO resposta =
+                    restTemplate.getForObject(uri, GeneroResponseDTO.class);
+
+            if (resposta == null || resposta.genres() == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_GATEWAY,
+                        "O TMDB não retornou a lista de gêneros."
+                );
+            }
+
+            Map<Integer, String> nomes = new HashMap<>();
+            for (GeneroDTO genero : resposta.genres()) {
+                if (genero != null && genero.id() != null
+                        && genero.name() != null && !genero.name().isBlank()) {
+                    nomes.put(Math.toIntExact(genero.id()), genero.name());
+                }
+            }
+
+            return new GenerosEmCache(
+                    Map.copyOf(nomes),
+                    Instant.now().plus(Duration.ofHours(6))
+            );
+        }).nomes();
     }
 }

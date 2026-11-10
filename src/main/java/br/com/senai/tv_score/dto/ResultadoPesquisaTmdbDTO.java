@@ -3,6 +3,8 @@ package br.com.senai.tv_score.dto;
 import br.com.senai.tv_score.filme.TipoConteudo;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Map;
+import java.util.Objects;
 
 import java.util.List;
 
@@ -39,7 +41,7 @@ public record ResultadoPesquisaTmdbDTO(
         return "movie".equals(mediaType) || "tv".equals(mediaType);
     }
 
-    public FilmeDTO paraFilmeDTO() {
+    public FilmeDTO paraFilmeDTO(Map<Integer, String> nomesPorId) {
         if (!ehFilmeOuSerie()) {
             throw new IllegalArgumentException(
                     "O resultado não representa filme ou série."
@@ -47,6 +49,14 @@ public record ResultadoPesquisaTmdbDTO(
         }
 
         boolean filme = "movie".equals(mediaType);
+
+        List<String> nomesGeneros = genreIds == null
+                ? List.of()
+                : genreIds.stream()
+                .filter(Objects::nonNull)
+                .map(nomesPorId::get)
+                .filter(Objects::nonNull)
+                .toList();
 
         return new FilmeDTO(
                 id,
@@ -56,8 +66,10 @@ public record ResultadoPesquisaTmdbDTO(
                 filme ? releaseDate : firstAirDate,
                 posterPath,
                 backdropPath,
-                genreIds,
-                filme ? TipoConteudo.MOVIE : TipoConteudo.TV
+                null, // Omite genre_ids na resposta da pesquisa
+                filme ? TipoConteudo.MOVIE : TipoConteudo.TV,
+                null, // Onde assistir continua nos detalhes
+                nomesGeneros
         );
     }
 }
