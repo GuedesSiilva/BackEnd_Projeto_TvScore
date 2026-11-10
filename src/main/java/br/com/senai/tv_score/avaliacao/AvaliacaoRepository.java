@@ -2,6 +2,7 @@ package br.com.senai.tv_score.avaliacao;
 
 import br.com.senai.tv_score.filme.TipoConteudo;
 import br.com.senai.tv_score.usuarios.Usuario;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,11 +11,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AvaliacaoRepository extends JpaRepository<Avaliacao, Long> {
+    @EntityGraph(attributePaths = "usuario")
     List<Avaliacao> findByFilmeSerieIdAndTipoConteudo(
             Long filmeSerieId,
             TipoConteudo tipoConteudo
     );
 
+    @EntityGraph(attributePaths = "usuario")
     List<Avaliacao> findByUsuario(Usuario usuario);
 
     Optional<Avaliacao> findByUsuarioAndFilmeSerieIdAndTipoConteudo(

@@ -1,12 +1,12 @@
 package br.com.senai.tv_score.avaliacao;
 
+import br.com.senai.tv_score.dto.AtualizarAvaliacaoDTO;
 import br.com.senai.tv_score.dto.AvaliacaoDTO;
 import br.com.senai.tv_score.dto.ResumoAvaliacaoDTO;
 import br.com.senai.tv_score.filme.TipoConteudo;
 import br.com.senai.tv_score.usuarios.Usuario;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import br.com.senai.tv_score.dto.AtualizarAvaliacaoDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -46,6 +46,8 @@ public class AvaliacaoService {
 
     @Transactional
     public AvaliacaoDTO avaliar(Usuario usuario, AvaliacaoDTO dto) {
+        validarConteudo(dto.filmeSerieId(), dto.tipoConteudo());
+        String comentario = validarEdicao(dto.nota(), dto.comentario());
         Avaliacao avaliacao = avaliacaoRepository
                 .findByUsuarioAndFilmeSerieIdAndTipoConteudo(
                         usuario,
@@ -56,12 +58,12 @@ public class AvaliacaoService {
                         usuario,
                         dto.filmeSerieId(),
                         dto.nota(),
-                        dto.comentario(),
+                        comentario,
                         dto.tipoConteudo()
                 ));
 
         avaliacao.setNota(dto.nota());
-        avaliacao.setComentario(dto.comentario());
+        avaliacao.setComentario(comentario);
 
         Avaliacao salva = avaliacaoRepository.save(avaliacao);
 
@@ -70,20 +72,7 @@ public class AvaliacaoService {
 
     @Transactional
     public void removerAvaliacao(Usuario usuario, Long id) {
-        Avaliacao avaliacao = avaliacaoRepository.findById(id)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Avaliação não encontrada."
-                        )
-                );
-
-        if (!avaliacao.getUsuario().getId().equals(usuario.getId())) {
-            throw new IllegalArgumentException(
-                    "Você não tem permissão para remover esta avaliação."
-            );
-        }
-
-        avaliacaoRepository.delete(avaliacao);
+        avaliacaoRepository.delete(buscarDoUsuario(usuario, id));
     }
 
     private AvaliacaoDTO paraDTO(Avaliacao avaliacao) {
@@ -103,17 +92,7 @@ public class AvaliacaoService {
             Long filmeSerieId,
             TipoConteudo tipoConteudo
     ) {
-        if (filmeSerieId == null || filmeSerieId <= 0) {
-            throw new IllegalArgumentException(
-                    "O ID do conteúdo deve ser positivo."
-            );
-        }
-
-        if (tipoConteudo == null) {
-            throw new IllegalArgumentException(
-                    "O tipo do conteúdo é obrigatório."
-            );
-        }
+        validarConteudo(filmeSerieId, tipoConteudo);
 
         AvaliacaoRepository.ResumoNotas resumo =
                 avaliacaoRepository.buscarResumo(
@@ -134,41 +113,45 @@ public class AvaliacaoService {
             Long id,
             AtualizarAvaliacaoDTO dto
     ) {
+        String comentario = validarEdicao(dto.nota(), dto.comentario());
+        Avaliacao avaliacao = buscarDoUsuario(usuario, id);
+        avaliacao.setNota(dto.nota());
+        avaliacao.setComentario(comentario);
+        return paraDTO(avaliacao);
+    }
+
+    private Avaliacao buscarDoUsuario(Usuario usuario, Long id) {
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException(
-                    "O ID da avaliação deve ser positivo."
-            );
+            throw new IllegalArgumentException("O ID da avaliação deve ser positivo.");
         }
-
-        if (dto.nota() == null
-                || !Double.isFinite(dto.nota())
-                || dto.nota() < 0
-                || dto.nota() > 10) {
-            throw new IllegalArgumentException(
-                    "Informe uma nota entre 0 e 10."
-            );
-        }
-
         Avaliacao avaliacao = avaliacaoRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Avaliação não encontrada."
+                        HttpStatus.NOT_FOUND, "Avaliação não encontrada."
                 ));
-
         if (!avaliacao.getUsuario().getId().equals(usuario.getId())) {
             throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Você não tem permissão para editar esta avaliação."
+                    HttpStatus.FORBIDDEN, "Você não tem permissão para alterar esta avaliação."
             );
         }
+        return avaliacao;
+    }
 
-        avaliacao.setNota(dto.nota());
-        avaliacao.setComentario(
-                dto.comentario() == null
-                        ? null
-                        : dto.comentario().strip()
-        );
+    private static void validarConteudo(Long id, TipoConteudo tipo) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("O ID do conteúdo deve ser positivo.");
+        }
+        if (tipo == null) {
+            throw new IllegalArgumentException("O tipo do conteúdo é obrigatório.");
+        }
+    }
 
-        return paraDTO(avaliacao);
+    private static String validarEdicao(Double nota, String comentario) {
+        if (nota == null || !Double.isFinite(nota) || nota < 0 || nota > 10) {
+            throw new IllegalArgumentException("Informe uma nota entre 0 e 10.");
+        }
+        if (comentario != null && comentario.length() > 1000) {
+            throw new IllegalArgumentException("O comentário deve ter até 1000 caracteres.");
+        }
+        return comentario == null ? null : comentario.strip();
     }
 }

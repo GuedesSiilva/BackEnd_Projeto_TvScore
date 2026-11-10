@@ -4,14 +4,11 @@ import br.com.senai.tv_score.dto.EpisodioDTO;
 import br.com.senai.tv_score.dto.PainelEpisodiosDTO;
 import br.com.senai.tv_score.dto.TemporadaDTO;
 import br.com.senai.tv_score.dto.TemporadasSerieDTO;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -22,21 +19,16 @@ import java.util.Objects;
 @Service
 public class EpisodioService {
 
-    private final RestTemplate restTemplate;
-    private final String apiUrl;
-    private final String apiKey;
-    private final String language;
+    private record ChaveTemporada(Long serieId, int temporada) {}
 
-    public EpisodioService(
-            RestTemplate restTemplate,
-            @Value("${tmdb.api.url}") String apiUrl,
-            @Value("${tmdb.api.key}") String apiKey,
-            @Value("${tmdb.api.language}") String language
-    ) {
-        this.restTemplate = restTemplate;
-        this.apiUrl = apiUrl;
-        this.apiKey = apiKey;
-        this.language = language;
+    private final TmdbClient tmdb;
+    private final CacheTmdb<Long, TemporadasSerieDTO> cacheSeries =
+            new CacheTmdb<>(Duration.ofMinutes(15), 128);
+    private final CacheTmdb<ChaveTemporada, TemporadaDTO> cacheTemporadas =
+            new CacheTmdb<>(Duration.ofMinutes(15), 128);
+
+    public EpisodioService(TmdbClient tmdb) {
+        this.tmdb = tmdb;
     }
 
     public TemporadaDTO buscarTemporada(
@@ -46,6 +38,13 @@ public class EpisodioService {
         validarSerie(serieId);
         validarTemporada(temporada);
 
+        return cacheTemporadas.buscar(
+                new ChaveTemporada(serieId, temporada),
+                () -> carregarTemporada(serieId, temporada)
+        );
+    }
+
+    private TemporadaDTO carregarTemporada(Long serieId, int temporada) {
         TemporadaDTO resposta = consultar(
                 "/tv/" + serieId + "/season/" + temporada,
                 TemporadaDTO.class
@@ -115,17 +114,15 @@ public class EpisodioService {
             );
         }
 
-        TemporadasSerieDTO serie = consultar(
-                "/tv/" + serieId,
-                TemporadasSerieDTO.class
-        );
-
-        if (serie.seasons() == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_GATEWAY,
-                    "O TMDB não retornou a lista de temporadas."
-            );
-        }
+        TemporadasSerieDTO serie = cacheSeries.buscar(serieId, () -> {
+            TemporadasSerieDTO resposta = consultar("/tv/" + serieId, TemporadasSerieDTO.class);
+            if (resposta.seasons() == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_GATEWAY, "O TMDB não retornou a lista de temporadas."
+                );
+            }
+            return resposta;
+        });
 
         List<Integer> numeros = serie.seasons().stream()
                 .filter(Objects::nonNull)
@@ -190,24 +187,7 @@ public class EpisodioService {
     }
 
     private <T> T consultar(String caminho, Class<T> tipo) {
-        URI uri = UriComponentsBuilder
-                .fromUriString(apiUrl + caminho)
-                .queryParam("api_key", apiKey)
-                .queryParam("language", language)
-                .build()
-                .encode()
-                .toUri();
-
-        T resposta = restTemplate.getForObject(uri, tipo);
-
-        if (resposta == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_GATEWAY,
-                    "O TMDB retornou uma resposta vazia."
-            );
-        }
-
-        return resposta;
+        return tmdb.buscar(tmdb.consulta(caminho), tipo);
     }
 
     private void validarSerie(Long serieId) {

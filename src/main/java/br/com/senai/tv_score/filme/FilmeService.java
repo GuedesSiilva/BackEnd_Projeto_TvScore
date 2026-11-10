@@ -1,46 +1,46 @@
 package br.com.senai.tv_score.filme;
 
 import br.com.senai.tv_score.dto.*;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Objects;
 
 @Service
 public class FilmeService {
 
-    @Value("${tmdb.api.url}")
-    private String apiUrl;
+    private static final Logger LOG = LoggerFactory.getLogger(FilmeService.class);
 
-    @Value("${tmdb.api.key}")
-    private String apiKey;
+    private record FiltroGenero(TipoConteudo tipo, Long id) {}
+    private record CatalogoGeneros(GeneroResponseDTO resposta, Map<Integer, String> nomes) {}
 
-    @Value("${tmdb.api.language}")
-    private String language;
+    private final TmdbClient tmdb;
+    private final CacheTmdb<TipoConteudo, CatalogoGeneros> cacheGeneros =
+            new CacheTmdb<>(Duration.ofHours(6), 2);
+    private final CacheTmdb<FiltroGenero, TmdbResponseDTO> cachePrimeiraPagina =
+            new CacheTmdb<>(Duration.ofMinutes(5), 128);
 
-    private final RestTemplate restTemplate;
-
-    public FilmeService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    public FilmeService(TmdbClient tmdb) {
+        this.tmdb = tmdb;
     }
 
     // Atende ao RF05 (Exibição de filmes em Destaque/Trending)
     public TmdbResponseDTO buscarFilmesEmAlta() {
         return consultarLista(
-                criarConsultaTmdb("/trending/movie/week"),
+                tmdb.consulta("/trending/movie/week"),
                 TipoConteudo.MOVIE
         );
     }
@@ -49,7 +49,7 @@ public class FilmeService {
         validarPagina(pagina);
 
         return consultarLista(
-                criarConsultaTmdb("/trending/tv/week")
+                tmdb.consulta("/trending/tv/week")
                         .queryParam("page", pagina),
                 TipoConteudo.TV
         );
@@ -63,16 +63,9 @@ public class FilmeService {
             );
         }
 
-        if (pagina < 1 || pagina > 500) {
-            throw new IllegalArgumentException(
-                    "A página deve estar entre 1 e 500."
-            );
-        }
+        validarPagina(pagina);
 
-        URI uri = UriComponentsBuilder
-                .fromUriString(apiUrl + "/search/multi")
-                .queryParam("api_key", apiKey)
-                .queryParam("language", language)
+        URI uri = tmdb.consulta("/search/multi")
                 .queryParam("include_adult", false)
                 .queryParam("page", pagina)
                 .queryParam("query", "{termo}")
@@ -80,17 +73,9 @@ public class FilmeService {
                 .buildAndExpand(query.trim())
                 .toUri();
 
-        PesquisaTmdbResponseDTO resposta = restTemplate.getForObject(
-                uri,
-                PesquisaTmdbResponseDTO.class
-        );
-
-        if (resposta == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_GATEWAY,
-                    "O TMDB retornou uma resposta vazia."
-            );
-        }
+        PesquisaTmdbResponseDTO resposta = tmdb.buscar(uri, PesquisaTmdbResponseDTO.class);
+        Map<TipoConteudo, Map<Integer, String>> nomesPorTipo =
+                new EnumMap<>(TipoConteudo.class);
 
         List<ResultadoPesquisaTmdbDTO> resultadosOriginais =
                 resposta.results() == null
@@ -105,7 +90,11 @@ public class FilmeService {
                             ? TipoConteudo.TV
                             : TipoConteudo.MOVIE;
 
-                    return resultado.paraFilmeDTO(buscarNomesGeneros(tipo));
+                    Map<Integer, String> nomes = resultado.genreIds() == null
+                            || resultado.genreIds().isEmpty()
+                            ? Map.of()
+                            : nomesPorTipo.computeIfAbsent(tipo, this::buscarNomesGeneros);
+                    return resultado.paraFilmeDTO(nomes);
                 })
                 .toList();
 
@@ -146,23 +135,11 @@ public class FilmeService {
                 ? "/movie/"
                 : "/tv/";
 
-        URI uri = criarConsultaTmdb(caminho + id)
-                .queryParam("append_to_response", "watch/providers")
-                .build()
-                .encode()
-                .toUri();
-
-        DetalhesTmdbDTO resposta = restTemplate.getForObject(
-                uri,
+        DetalhesTmdbDTO resposta = tmdb.buscar(
+                tmdb.consulta(caminho + id)
+                        .queryParam("append_to_response", "watch/providers"),
                 DetalhesTmdbDTO.class
         );
-
-        if (resposta == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_GATEWAY,
-                    "O TMDB retornou uma resposta vazia."
-            );
-        }
 
         return resposta.paraFilmeDTO(tipo);
     }
@@ -261,51 +238,37 @@ public class FilmeService {
             );
         }
 
-        String caminho = tipo == TipoConteudo.MOVIE
-                ? "/discover/movie"
-                : "/discover/tv";
-
-        // Filmes e séries podem ter quantidades diferentes de páginas.
-        if (pagina > 1) {
-            TmdbResponseDTO primeiraPagina = buscarPorGenero(
-                    generoId,
-                    tipo,
-                    1
-            );
-
-            if (primeiraPagina.totalPages() != null
-                    && pagina > primeiraPagina.totalPages()) {
-                return new TmdbResponseDTO(
-                        List.of(),
-                        pagina,
-                        primeiraPagina.totalPages(),
-                        primeiraPagina.totalResults()
-                );
-            }
+        FiltroGenero filtro = new FiltroGenero(tipo, generoId);
+        TmdbResponseDTO primeiraPagina = cachePrimeiraPagina.buscar(
+                filtro, () -> consultarPaginaGenero(filtro, 1)
+        );
+        if (pagina == 1) {
+            return primeiraPagina;
         }
 
+        if (primeiraPagina.totalPages() != null && pagina > primeiraPagina.totalPages()) {
+            return new TmdbResponseDTO(
+                    List.of(), pagina, primeiraPagina.totalPages(), primeiraPagina.totalResults()
+            );
+        }
+        return consultarPaginaGenero(filtro, pagina);
+    }
+
+    private TmdbResponseDTO consultarPaginaGenero(FiltroGenero filtro, int pagina) {
+        String caminho = filtro.tipo() == TipoConteudo.MOVIE ? "/discover/movie" : "/discover/tv";
         return consultarLista(
-                criarConsultaTmdb(caminho)
-                        .queryParam("with_genres", generoId)
+                tmdb.consulta(caminho)
+                        .queryParam("with_genres", filtro.id())
                         .queryParam("sort_by", "popularity.desc")
                         .queryParam("include_adult", false)
                         .queryParam("page", pagina),
-                tipo
+                filtro.tipo()
         );
     }
 
-    // Configuração compartilhada pelas novas buscas.
     private UriComponentsBuilder criarBuscaFilmes(int pagina) {
-        if (pagina < 1) {
-            throw new IllegalArgumentException(
-                    "A página deve ser maior que zero."
-            );
-        }
-
-        return UriComponentsBuilder
-                .fromUriString(apiUrl + "/discover/movie")
-                .queryParam("api_key", apiKey)
-                .queryParam("language", language)
+        validarPagina(pagina);
+        return tmdb.consulta("/discover/movie")
                 .queryParam("include_adult", false)
                 .queryParam("page", pagina);
     }
@@ -318,17 +281,8 @@ public class FilmeService {
 
     // Lista os serviços disponíveis para filmes no Brasil.
     public StreamingResponseDTO listarStreamings() {
-        URI uri = UriComponentsBuilder
-                .fromUriString(apiUrl + "/watch/providers/movie")
-                .queryParam("api_key", apiKey)
-                .queryParam("language", language)
-                .queryParam("watch_region", "BR")
-                .build()
-                .encode()
-                .toUri();
-
-        return restTemplate.getForObject(
-                uri,
+        return tmdb.buscar(
+                tmdb.consulta("/watch/providers/movie").queryParam("watch_region", "BR"),
                 StreamingResponseDTO.class
         );
     }
@@ -400,12 +354,6 @@ public class FilmeService {
 
         return executarBusca(builder);
     }
-    private UriComponentsBuilder criarConsultaTmdb(String caminho) {
-        return UriComponentsBuilder
-                .fromUriString(apiUrl + caminho)
-                .queryParam("api_key", apiKey)
-                .queryParam("language", language);
-    }
 
     private void validarPagina(int pagina) {
         if (pagina < 1 || pagina > 500) {
@@ -419,19 +367,7 @@ public class FilmeService {
             UriComponentsBuilder builder,
             TipoConteudo tipo
     ) {
-        URI uri = builder.build().encode().toUri();
-
-        TmdbResponseDTO resposta = restTemplate.getForObject(
-                uri,
-                TmdbResponseDTO.class
-        );
-
-        if (resposta == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_GATEWAY,
-                    "O TMDB retornou uma resposta vazia."
-            );
-        }
+        TmdbResponseDTO resposta = tmdb.buscar(builder, TmdbResponseDTO.class);
 
         List<FilmeDTO> resultados = resposta.resultados() == null
                 ? List.of()
@@ -449,59 +385,29 @@ public class FilmeService {
     }
 
     public GeneroResponseDTO listarGeneros() {
-        URI uri = criarConsultaTmdb("/genre/movie/list")
-                .build()
-                .encode()
-                .toUri();
-
-        GeneroResponseDTO resposta = restTemplate.getForObject(
-                uri,
-                GeneroResponseDTO.class
-        );
-
-        if (resposta == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_GATEWAY,
-                    "O TMDB retornou uma resposta vazia."
-            );
-        }
-
-        return resposta;
+        return catalogoGeneros(TipoConteudo.MOVIE).resposta();
     }
-    private record GenerosEmCache(
-            Map<Integer, String> nomes,
-            Instant expiraEm
-    ) {}
-
-    private final Map<TipoConteudo, GenerosEmCache> cacheGeneros =
-            new ConcurrentHashMap<>();
 
     private Map<Integer, String> buscarNomesGeneros(TipoConteudo tipo) {
-        GenerosEmCache atual = cacheGeneros.get(tipo);
-        if (atual != null && atual.expiraEm().isAfter(Instant.now())) {
-            return atual.nomes();
+        try {
+            return catalogoGeneros(tipo).nomes();
+        } catch (RestClientException | ResponseStatusException ex) {
+            // A pesquisa já recebeu os títulos; preserva a resposta se o enriquecimento falhar.
+            LOG.warn("Não foi possível atualizar os gêneros para {}.", tipo);
+            CatalogoGeneros anterior = cacheGeneros.ultimoValor(tipo);
+            return anterior == null ? Map.of() : anterior.nomes();
         }
+    }
 
-        return cacheGeneros.compute(tipo, (chave, anterior) -> {
-            if (anterior != null && anterior.expiraEm().isAfter(Instant.now())) {
-                return anterior;
-            }
-
-            String caminho = chave == TipoConteudo.MOVIE
-                    ? "/genre/movie/list"
-                    : "/genre/tv/list";
-
-            URI uri = criarConsultaTmdb(caminho).build().encode().toUri();
-            GeneroResponseDTO resposta =
-                    restTemplate.getForObject(uri, GeneroResponseDTO.class);
-
-            if (resposta == null || resposta.genres() == null) {
+    private CatalogoGeneros catalogoGeneros(TipoConteudo tipo) {
+        return cacheGeneros.buscar(tipo, () -> {
+            String caminho = tipo == TipoConteudo.MOVIE ? "/genre/movie/list" : "/genre/tv/list";
+            GeneroResponseDTO resposta = tmdb.buscar(tmdb.consulta(caminho), GeneroResponseDTO.class);
+            if (resposta.genres() == null) {
                 throw new ResponseStatusException(
-                        HttpStatus.BAD_GATEWAY,
-                        "O TMDB não retornou a lista de gêneros."
+                        HttpStatus.BAD_GATEWAY, "O TMDB não retornou a lista de gêneros."
                 );
             }
-
             Map<Integer, String> nomes = new HashMap<>();
             for (GeneroDTO genero : resposta.genres()) {
                 if (genero != null && genero.id() != null
@@ -509,11 +415,7 @@ public class FilmeService {
                     nomes.put(Math.toIntExact(genero.id()), genero.name());
                 }
             }
-
-            return new GenerosEmCache(
-                    Map.copyOf(nomes),
-                    Instant.now().plus(Duration.ofHours(6))
-            );
-        }).nomes();
+            return new CatalogoGeneros(resposta, Map.copyOf(nomes));
+        });
     }
 }

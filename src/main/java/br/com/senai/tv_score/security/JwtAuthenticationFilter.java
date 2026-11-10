@@ -1,6 +1,5 @@
 package br.com.senai.tv_score.security;
 
-import br.com.senai.tv_score.usuarios.Usuario;
 import br.com.senai.tv_score.usuarios.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,7 +14,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Optional;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -37,33 +35,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
+        if (authHeader != null && authHeader.startsWith("Bearer ")
+                && SecurityContextHolder.getContext().getAuthentication() == null) {
+            jwtService.extrairEmailSeValido(authHeader.substring(7))
+                    .flatMap(usuarioRepository::findByEmail)
+                    .ifPresent(usuario -> {
+                        var autenticacao = new UsernamePasswordAuthenticationToken(
+                                usuario, null, Collections.emptyList()
+                        );
+                        autenticacao.setDetails(
+                                new WebAuthenticationDetailsSource().buildDetails(request)
+                        );
+                        SecurityContextHolder.getContext().setAuthentication(autenticacao);
+                    });
         }
-
-        String jwt = authHeader.substring(7);
-
-        if (jwtService.isTokenValido(jwt)) {
-            String email = jwtService.extrairEmail(jwt);
-
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email);
-
-                if (usuarioOpt.isPresent()) {
-                    Usuario usuario = usuarioOpt.get();
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            usuario,
-                            null,
-                            Collections.emptyList()
-                    );
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().getAuthentication();
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                }
-            }
-        }
-
         filterChain.doFilter(request, response);
     }
 }
