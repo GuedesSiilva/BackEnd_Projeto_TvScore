@@ -42,4 +42,5 @@ public interface AvaliacaoRepository extends JpaRepository<Avaliacao, Long> {
             @Param("filmeSerieId") Long filmeSerieId,
             @Param("tipoConteudo") TipoConteudo tipoConteudo
     );
+    void deleteByUsuario(Usuario usuario);
 }

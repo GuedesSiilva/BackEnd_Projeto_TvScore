@@ -23,4 +23,5 @@ public interface FavoritoRepository extends JpaRepository<Favorito, Long>{
             Long filmeSerieId,
             TipoConteudo tipoConteudo
     );
+    void deleteByUsuario(Usuario usuario);
 }
