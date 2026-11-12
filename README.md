@@ -99,6 +99,8 @@ docker run --rm -p 8080:8080 --env-file .env tvscore-backend
 | Autenticação | `POST /api/auth/login` | Login com `email` e `senha`; retorna `token`, `nome` e `email`. |
 | Perfil | `GET /api/usuarios/eu`, `PUT /api/usuarios/eu` | Consultar perfil ou atualizar `nome`. |
 | Preferências | `GET /api/usuarios/eu/generos`, `PUT /api/usuarios/eu/generos` | Consultar ou salvar códigos de gêneros preferidos. |
+| Opções de filmes preferidos | `GET /api/usuarios/eu/filmes-preferidos/opcoes?pagina=1` | Filmes do TMDB relacionados aos gêneros escolhidos, para montar a segunda etapa. |
+| Filmes preferidos | `GET /api/usuarios/eu/filmes-preferidos`, `PUT /api/usuarios/eu/filmes-preferidos` | Segunda etapa de preferências: consultar ou substituir até cinco filmes escolhidos para recomendação. |
 | Destaques | `GET /api/filmes/em-alta`, `GET /api/series/em-alta` | Buscar títulos em alta. |
 | Pesquisa | `GET /api/filmes/pesquisar?q=Batman&pagina=1` | Buscar filmes e séries na mesma lista. |
 | Detalhes | `GET /api/filmes/{id}`, `GET /api/series/{id}` | Consultar um título pelo ID do TMDB. |
@@ -133,6 +135,37 @@ Exemplo de corpo para `POST /api/avaliacoes`:
   "comentario": "Gostei do filme."
 }
 ```
+
+## Preferências em duas etapas
+
+Depois de cadastrar e fazer login, o aplicativo pode apresentar estas telas em sequência. As duas etapas usam `Authorization: Bearer <token>` e podem ser editadas posteriormente.
+
+1. **Gêneros:** carregue as opções em `GET /api/conteudos/generos` e salve até cinco códigos com `PUT /api/usuarios/eu/generos`.
+2. **Filmes de que mais gosto:** carregue `GET /api/usuarios/eu/filmes-preferidos/opcoes?pagina=1` para mostrar filmes relacionados aos gêneros salvos na primeira etapa. Envie até cinco IDs do TMDB para `PUT /api/usuarios/eu/filmes-preferidos`.
+
+A rota de opções exige JWT e retorna `results`, `page`, `total_pages` e `total_results`. Cada opção inclui `id`, `title`, `poster_path`, `release_date`, `vote_average`, `genre_ids` e `tipoConteudo: "MOVIE"`, para montar os cards de seleção. `poster_path` é o caminho da imagem no TMDB; o aplicativo pode usar a base `https://image.tmdb.org/t/p/w500`. A página aceita valores de 1 a 500.
+
+As opções usam o filtro por qualquer um dos gêneros escolhidos (`OR`), ordenação por popularidade, pelo menos 100 votos e exclusão de conteúdo adulto. Sem gêneros escolhidos, ou quando os gêneros existem apenas em séries, oferece filmes populares. Essa lista apenas apresenta opções: o usuário indica de quais filmes gosta, e o backend salva somente os escolhidos. Para encontrar outro título, a pesquisa existente `GET /api/filmes/pesquisar?q=...` continua disponível; nesse caso, selecione apenas resultados `MOVIE`.
+
+Exemplo da segunda etapa:
+
+```http
+PUT /api/usuarios/eu/filmes-preferidos
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{"filmes": [550, 603, 157336]}
+```
+
+O `PUT` substitui toda a seleção, remove IDs repetidos e retorna `200` com `{"filmes": [...]}`. Enviar `{"filmes": []}` limpa essa etapa. O `GET` da mesma rota retorna os dados salvos, sem consultar o TMDB; antes da primeira seleção, retorna uma lista vazia. As respostas são ordenadas por `filmeId`.
+
+Cada filme retornado contém `filmeId`, `titulo`, `sinopse`, `generos` (ID e nome), `idiomaOriginal`, `dataLancamento`, `notaTmdb`, `popularidade`, `posterPath` e `selecionadoEm`. Os metadados vêm dos detalhes do TMDB, e não do aplicativo. `notaTmdb` é a média do catálogo, não uma avaliação dada pelo usuário. Campos opcionais podem ser nulos ou vazios se o catálogo não os informar.
+
+A seleção é independente de `/api/favoritos` e de `/api/avaliacoes`. Os filmes e seus gêneros são persistidos nas tabelas `usuario_filme_preferido` e `usuario_filme_preferido_genero`; com a configuração atual `ddl-auto=update`, o Hibernate cria as novas tabelas ao iniciar. Excluir a conta remove também essa seleção.
+
+Sem token, a rota retorna `401`; lista ausente, IDs inválidos ou mais de cinco itens retornam `400`. Se qualquer filme não existir no TMDB, retorna `404`; falhas do catálogo preservam toda a seleção anterior. Alterações simultâneas do mesmo usuário são serializadas, e repetir a seleção não cria registros duplicados nem altera a data de escolha dos filmes mantidos.
+
+Esses dados formam sinais de preferência que o serviço externo de recomendação pode consumir pelo `GET`, usando o token do usuário. O algoritmo desse serviço não é alterado por esta rota. A interface Flutter ainda deve conectar as duas telas às rotas descritas; as etapas não são obrigatórias nem bloqueiam o uso das demais rotas.
 
 ## Organização do código
 

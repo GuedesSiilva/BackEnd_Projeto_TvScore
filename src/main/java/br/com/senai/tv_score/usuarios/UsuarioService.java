@@ -17,17 +17,20 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final AvaliacaoRepository avaliacaoRepository;
     private final FavoritoRepository favoritoRepository;
+    private final FilmePreferidoRepository filmePreferidoRepository;
     private final PasswordEncoder passwordEncoder;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
             AvaliacaoRepository avaliacaoRepository,
             FavoritoRepository favoritoRepository,
+            FilmePreferidoRepository filmePreferidoRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.usuarioRepository = usuarioRepository;
         this.avaliacaoRepository = avaliacaoRepository;
         this.favoritoRepository = favoritoRepository;
+        this.filmePreferidoRepository = filmePreferidoRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -71,10 +74,12 @@ public class UsuarioService {
 
         avaliacaoRepository.deleteByUsuario(usuario);
         favoritoRepository.deleteByUsuario(usuario);
+        filmePreferidoRepository.deleteByUsuario(usuario);
 
         // Executa a exclusão dos registros vinculados antes da conta.
         avaliacaoRepository.flush();
         favoritoRepository.flush();
+        filmePreferidoRepository.flush();
 
         // A coleção é gerenciada pelo JPA na tabela usuario_genero.
         usuario.getGenerosPreferidos().clear();
