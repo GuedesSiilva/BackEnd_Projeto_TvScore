@@ -18,7 +18,7 @@ public class TmdbClient {
     private final String idioma;
 
     public TmdbClient(
-            RestTemplate restTemplate,
+            @org.springframework.beans.factory.annotation.Qualifier("restTemplate") RestTemplate restTemplate,
             @Value("${tmdb.api.url}") String apiUrl,
             @Value("${tmdb.api.key}") String apiKey,
             @Value("${tmdb.api.language}") String idioma
@@ -40,7 +40,24 @@ public class TmdbClient {
     }
 
     public <T> T buscar(URI uri, Class<T> tipo) {
-        T resposta = restTemplate.getForObject(uri, tipo);
+        T resposta;
+        try { resposta = restTemplate.getForObject(uri, tipo); }
+        catch (org.springframework.web.client.RestClientResponseException ex) {
+            int codigo = ex.getStatusCode().value();
+            HttpStatus status = codigo == 404 ? HttpStatus.NOT_FOUND
+                : codigo == 429 || codigo == 503 ? HttpStatus.SERVICE_UNAVAILABLE : HttpStatus.BAD_GATEWAY;
+            throw new ResponseStatusException(status, "Falha na consulta ao TMDB (HTTP " + codigo + ").");
+        } catch (org.springframework.web.client.ResourceAccessException ex) {
+            Throwable causa = ex;
+            while (causa != null) {
+                if (causa instanceof java.net.SocketTimeoutException || causa instanceof java.net.http.HttpTimeoutException)
+                    throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "O TMDB demorou para responder.");
+                causa = causa.getCause();
+            }
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "TMDB indisponivel.");
+        } catch (org.springframework.web.client.RestClientException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Resposta invalida do TMDB.");
+        }
         if (resposta == null) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_GATEWAY, "O TMDB retornou uma resposta vazia."

@@ -107,7 +107,7 @@ public class GlobalExceptionHandler {
         return erro(
                 HttpStatus.BAD_REQUEST,
                 "Corpo da requisição inválido. Confira o JSON, "
-                        + "os tipos dos campos e os valores MOVIE ou TV."
+                        + "os tipos e valores dos campos."
         );
     }
 
@@ -275,7 +275,7 @@ public class GlobalExceptionHandler {
 
         // Não registra corpo, URL externa, senha ou token.
         log.error(
-                "Falha interna. referencia={}, tipo={}",
+                "Falha interna. referencia={}, tipo={}, origem={}",
                 referencia,
                 ex.getClass().getName()
         );

@@ -58,4 +58,17 @@ class CacheTmdbTest {
         assertNull(cache.ultimoValor("b"));
         assertEquals(1, cache.ultimoValor("a").intValue());
     }
+    @Test void falhaNaoEnvenenaCache() {
+        var cache = new CacheTmdb<String,Integer>(Duration.ofMinutes(1),2);
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+            () -> cache.buscar("a", () -> { throw new IllegalStateException(); }));
+        assertEquals(2, cache.buscar("a", () -> 2));
+    }
+    @Test void expiraERetemUltimoValor() throws Exception {
+        var cache = new CacheTmdb<String,Integer>(Duration.ofMillis(10),2);
+        cache.buscar("a", () -> 1);
+        Thread.sleep(30);
+        assertEquals(1,cache.ultimoValor("a"));
+        assertEquals(2,cache.buscar("a", () -> 2));
+    }
 }

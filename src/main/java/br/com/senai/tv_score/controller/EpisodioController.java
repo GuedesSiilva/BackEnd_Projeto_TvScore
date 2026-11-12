@@ -57,4 +57,21 @@ public class EpisodioController {
                 episodio
         );
     }
+
+    @GetMapping("/{serieId}/episodios/grade")
+    public br.com.senai.tv_score.dto.GradeEpisodiosDTO grade(@PathVariable Long serieId,
+            @RequestParam(defaultValue = "false") boolean incluirEspeciais) {
+        var painel = episodioService.buscarPainel(serieId, 10, 1, incluirEspeciais);
+        return new br.com.senai.tv_score.dto.GradeEpisodiosDTO(serieId,
+            painel.temporadas().stream().flatMap(t -> t.episodes().stream())
+            .map(e -> new br.com.senai.tv_score.dto.GradeEpisodiosDTO.Celula(
+                e.temporada(), e.numero(), e.nota(), e.quantidadeVotos(), e.dataExibicao())).toList());
+    }
+    @GetMapping("/{serieId}/episodios/ranking")
+    public java.util.List<EpisodioDTO> ranking(@PathVariable Long serieId,
+            @RequestParam(defaultValue = "10") int limite,
+            @RequestParam(defaultValue = "1") int minimoVotos,
+            @RequestParam(defaultValue = "false") boolean incluirEspeciais) {
+        return episodioService.buscarPainel(serieId, limite, minimoVotos, incluirEspeciais).topRated();
+    }
 }

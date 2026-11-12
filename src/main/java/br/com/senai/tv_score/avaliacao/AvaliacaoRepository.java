@@ -43,4 +43,9 @@ public interface AvaliacaoRepository extends JpaRepository<Avaliacao, Long> {
             @Param("tipoConteudo") TipoConteudo tipoConteudo
     );
     void deleteByUsuario(Usuario usuario);
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "usuario")
+    org.springframework.data.domain.Page<Avaliacao> findByUsuario(Usuario usuario, org.springframework.data.domain.Pageable pagina);
+    @EntityGraph(attributePaths = "usuario")
+    org.springframework.data.domain.Page<Avaliacao> findByFilmeSerieIdAndTipoConteudo(
+        Long filmeSerieId, TipoConteudo tipoConteudo, org.springframework.data.domain.Pageable pagina);
 }

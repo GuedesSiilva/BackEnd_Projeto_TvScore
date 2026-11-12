@@ -3,24 +3,29 @@ package br.com.senai.tv_score.usuarios;
 import br.com.senai.tv_score.dto.GeneroConteudoDTO;
 import br.com.senai.tv_score.dto.PreferenciasGenerosRequestDTO;
 import br.com.senai.tv_score.dto.PreferenciasGenerosResponseDTO;
-import br.com.senai.tv_score.filme.GeneroConteudo;
+import br.com.senai.tv_score.filme.GeneroService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Service
 public class PreferenciasUsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final GeneroService generoService;
+    private final org.springframework.transaction.support.TransactionTemplate transacao;
 
     public PreferenciasUsuarioService(
-            UsuarioRepository usuarioRepository
+            UsuarioRepository usuarioRepository,
+            GeneroService generoService,
+            org.springframework.transaction.PlatformTransactionManager manager
     ) {
         this.usuarioRepository = usuarioRepository;
+        this.generoService = generoService;
+        this.transacao = new org.springframework.transaction.support.TransactionTemplate(manager);
     }
 
     @Transactional(readOnly = true)
@@ -29,26 +34,31 @@ public class PreferenciasUsuarioService {
     ) {
         Long usuarioId = exigirUsuario(usuarioAutenticado);
 
+        List<GeneroConteudoDTO> catalogo =
+                generoService.listarGenerosDisponiveis().stream().map(g -> new GeneroConteudoDTO(g.codigo(), g.nome())).toList();
+
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(this::usuarioNaoEncontrado);
 
-        return paraDTO(usuario);
+        return paraDTO(usuario, catalogo);
     }
 
-    @Transactional
     public PreferenciasGenerosResponseDTO salvar(
             Usuario usuarioAutenticado,
             PreferenciasGenerosRequestDTO dto
     ) {
         Long usuarioId = exigirUsuario(usuarioAutenticado);
 
-        // Valida todos os códigos antes de modificar a seleção.
+        // Consulta e valida antes de bloquear/modificar o usuário.
+        List<GeneroConteudoDTO> catalogo =
+                generoService.listarGenerosDisponiveis().stream().map(g -> new GeneroConteudoDTO(g.codigo(), g.nome())).toList();
+
         List<String> codigos = dto.generos().stream()
-                .map(GeneroConteudo::porCodigo)
-                .map(GeneroConteudo::getCodigo)
+                .map(codigo -> generoService.resolverGenero(codigo).codigo())
                 .distinct()
                 .toList();
 
+        return transacao.execute(status -> {
         Usuario usuario = usuarioRepository
                 .buscarPorIdComBloqueio(usuarioId)
                 .orElseThrow(this::usuarioNaoEncontrado);
@@ -56,22 +66,17 @@ public class PreferenciasUsuarioService {
         usuario.getGenerosPreferidos().clear();
         usuario.getGenerosPreferidos().addAll(codigos);
 
-        // A entidade está gerenciada. A transação persiste a alteração.
-        return paraDTO(usuario);
+        return paraDTO(usuario, catalogo);
+        });
     }
 
-    private PreferenciasGenerosResponseDTO paraDTO(Usuario usuario) {
-        List<GeneroConteudoDTO> selecionados =
-                Arrays.stream(GeneroConteudo.values())
-                        .filter(genero ->
-                                usuario.getGenerosPreferidos()
-                                        .contains(genero.getCodigo())
-                        )
-                        .map(genero -> new GeneroConteudoDTO(
-                                genero.getCodigo(),
-                                genero.getNome()
-                        ))
-                        .toList();
+    private PreferenciasGenerosResponseDTO paraDTO(
+            Usuario usuario,
+            List<GeneroConteudoDTO> catalogo
+    ) {
+        List<GeneroConteudoDTO> selecionados = usuario.getGenerosPreferidos().stream()
+            .map(codigo -> catalogo.stream().filter(g -> g.codigo().equals(codigo)).findFirst()
+                .orElse(new GeneroConteudoDTO(codigo, codigo))).toList();
 
         return new PreferenciasGenerosResponseDTO(selecionados);
     }

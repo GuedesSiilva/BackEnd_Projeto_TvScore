@@ -25,11 +25,11 @@ public class AuthService {
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(request.email());
 
         if (usuarioOpt.isEmpty() || !passwordEncoder.matches(request.senha(), usuarioOpt.get().getSenha())) {
-            return null;
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos");
         }
 
         Usuario usuario = usuarioOpt.get();
-        String token = jwtService.gerarToken(usuario.getEmail());
+        String token = jwtService.gerarToken(usuario.getId());
 
         return new LoginResponse(token, usuario.getNome(), usuario.getEmail());
     }
@@ -42,13 +42,13 @@ public class AuthService {
         String senhaCriptografada = passwordEncoder.encode(request.senha());
 
         Usuario novoUsuario = new Usuario(
-                request.nome(),
+                Usuario.normalizarNome(request.nome()),
                 request.email(),
                 senhaCriptografada
         );
 
         Usuario usuarioSalvo = usuarioRepository.save(novoUsuario);
-        String token = jwtService.gerarToken(usuarioSalvo.getEmail());
+        String token = jwtService.gerarToken(usuarioSalvo.getId());
 
         return new LoginResponse(token, usuarioSalvo.getNome(), usuarioSalvo.getEmail());
     }

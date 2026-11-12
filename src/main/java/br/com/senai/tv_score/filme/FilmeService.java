@@ -1,20 +1,12 @@
 package br.com.senai.tv_score.filme;
 
 import br.com.senai.tv_score.dto.*;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
-
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Objects;
@@ -22,19 +14,17 @@ import java.util.Objects;
 @Service
 public class FilmeService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(FilmeService.class);
 
     private record FiltroGenero(TipoConteudo tipo, Long id) {}
-    private record CatalogoGeneros(GeneroResponseDTO resposta, Map<Integer, String> nomes) {}
 
     private final TmdbClient tmdb;
-    private final CacheTmdb<TipoConteudo, CatalogoGeneros> cacheGeneros =
-            new CacheTmdb<>(Duration.ofHours(6), 2);
+    private final GeneroService generos;
     private final CacheTmdb<FiltroGenero, TmdbResponseDTO> cachePrimeiraPagina =
             new CacheTmdb<>(Duration.ofMinutes(5), 128);
 
-    public FilmeService(TmdbClient tmdb) {
+    public FilmeService(TmdbClient tmdb, GeneroService generos) {
         this.tmdb = tmdb;
+        this.generos = generos;
     }
 
     // Atende ao RF05 (Exibição de filmes em Destaque/Trending)
@@ -93,7 +83,7 @@ public class FilmeService {
                     Map<Integer, String> nomes = resultado.genreIds() == null
                             || resultado.genreIds().isEmpty()
                             ? Map.of()
-                            : nomesPorTipo.computeIfAbsent(tipo, this::buscarNomesGeneros);
+                            : nomesPorTipo.computeIfAbsent(tipo, generos::buscarNomesGeneros);
                     return resultado.paraFilmeDTO(nomes);
                 })
                 .toList();
@@ -154,10 +144,10 @@ public class FilmeService {
 
     // Retorna a lista única de gêneros para o Flutter.
     public List<GeneroConteudoDTO> listarGenerosConteudo() {
-        return Arrays.stream(GeneroConteudo.values())
+        return generos.listarGenerosDisponiveis().stream()
                 .map(genero -> new GeneroConteudoDTO(
-                        genero.getCodigo(),
-                        genero.getNome()
+                        genero.codigo(),
+                        genero.nome()
                 ))
                 .toList();
     }
@@ -169,17 +159,22 @@ public class FilmeService {
     ) {
         validarPagina(pagina);
 
-        GeneroConteudo genero = GeneroConteudo.porCodigo(codigoGenero);
+        GeneroService.GeneroDisponivel genero = generos.resolverGenero(codigoGenero);
 
-        TmdbResponseDTO filmes = buscarPorGenero(
-                genero.getGeneroFilmeId(),
+        TmdbResponseDTO filmes = genero.generoFilmeId() == null
+                ? paginaVazia(pagina)
+                : buscarPorGenero(
+                genero.generoFilmeId(),
                 TipoConteudo.MOVIE,
                 pagina
         );
 
-        TmdbResponseDTO series = buscarPorGenero(
-                genero.getGeneroSerieId(),
-                TipoConteudo.TV,                pagina
+        TmdbResponseDTO series = genero.generoSerieId() == null
+                ? paginaVazia(pagina)
+                : buscarPorGenero(
+                genero.generoSerieId(),
+                TipoConteudo.TV,
+                pagina
         );
 
         List<FilmeDTO> resultados = new ArrayList<>();
@@ -189,7 +184,6 @@ public class FilmeService {
                 series.resultados().size()
         );
 
-        // Uma única lista, alternando filmes e séries.
         for (int indice = 0; indice < maiorLista; indice++) {
             if (indice < filmes.resultados().size()) {
                 resultados.add(filmes.resultados().get(indice));
@@ -207,13 +201,24 @@ public class FilmeService {
 
         int totalResultados =
                 (filmes.totalResults() == null ? 0 : filmes.totalResults())
-                        + (series.totalResults() == null ? 0 : series.totalResults());
+                        + (series.totalResults() == null
+                        ? 0
+                        : series.totalResults());
 
         return new TmdbResponseDTO(
                 resultados,
                 pagina,
                 totalPaginas,
                 totalResultados
+        );
+    }
+
+    private TmdbResponseDTO paginaVazia(int pagina) {
+        return new TmdbResponseDTO(
+                List.of(),
+                pagina,
+                0,
+                0
         );
     }
 
@@ -372,7 +377,7 @@ public class FilmeService {
                 ? List.of()
                 : resposta.resultados().stream()
                 .filter(Objects::nonNull)
-                .map(conteudo -> conteudo.comTipo(tipo))
+                .map(conteudo -> conteudo.comGeneros(tipo, generos.buscarNomesGeneros(tipo)))
                 .toList();
 
         return new TmdbResponseDTO(
@@ -383,38 +388,5 @@ public class FilmeService {
         );
     }
 
-    public GeneroResponseDTO listarGeneros() {
-        return catalogoGeneros(TipoConteudo.MOVIE).resposta();
-    }
-
-    private Map<Integer, String> buscarNomesGeneros(TipoConteudo tipo) {
-        try {
-            return catalogoGeneros(tipo).nomes();
-        } catch (RestClientException | ResponseStatusException ex) {
-            // A pesquisa já recebeu os títulos; preserva a resposta se o enriquecimento falhar.
-            LOG.warn("Não foi possível atualizar os gêneros para {}.", tipo);
-            CatalogoGeneros anterior = cacheGeneros.ultimoValor(tipo);
-            return anterior == null ? Map.of() : anterior.nomes();
-        }
-    }
-
-    private CatalogoGeneros catalogoGeneros(TipoConteudo tipo) {
-        return cacheGeneros.buscar(tipo, () -> {
-            String caminho = tipo == TipoConteudo.MOVIE ? "/genre/movie/list" : "/genre/tv/list";
-            GeneroResponseDTO resposta = tmdb.buscar(tmdb.consulta(caminho), GeneroResponseDTO.class);
-            if (resposta.genres() == null) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_GATEWAY, "O TMDB não retornou a lista de gêneros."
-                );
-            }
-            Map<Integer, String> nomes = new HashMap<>();
-            for (GeneroDTO genero : resposta.genres()) {
-                if (genero != null && genero.id() != null
-                        && genero.name() != null && !genero.name().isBlank()) {
-                    nomes.put(Math.toIntExact(genero.id()), genero.name());
-                }
-            }
-            return new CatalogoGeneros(resposta, Map.copyOf(nomes));
-        });
-    }
+    public GeneroResponseDTO listarGeneros() { return generos.listarGeneros(); }
 }

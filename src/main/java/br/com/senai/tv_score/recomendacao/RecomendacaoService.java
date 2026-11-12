@@ -23,13 +23,8 @@ public class RecomendacaoService {
 
     public RecomendacaoService(
             @Value("${recomendacao.api.url}") String apiUrl,
-            @Value("${recomendacao.api.timeout-ms:60000}") int timeoutMs
+            @org.springframework.beans.factory.annotation.Qualifier("recomendadorHttp") RestTemplate cliente
     ) {
-        if (timeoutMs < 1) {
-            throw new IllegalArgumentException(
-                    "O timeout do recomendador deve ser positivo."
-            );
-        }
 
         URI base = URI.create(apiUrl);
 
@@ -50,13 +45,7 @@ public class RecomendacaoService {
                 .build()
                 .toUri();
 
-        SimpleClientHttpRequestFactory factory =
-                new SimpleClientHttpRequestFactory();
-
-        factory.setConnectTimeout(5000);
-        factory.setReadTimeout(timeoutMs);
-
-        this.cliente = new RestTemplate(factory);
+        this.cliente = cliente;
     }
 
     public RecomendacoesDTO buscarFilmes(String authorization) {

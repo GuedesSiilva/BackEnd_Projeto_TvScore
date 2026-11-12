@@ -41,37 +41,9 @@ public record FilmeDTO(
         List<String> genres
 ) {
 
-        public FilmeDTO(
-                Long id,
-                String title,
-                String overview,
-                Double voteAverage,
-                String releaseDate,
-                String posterPath,
-                String backdropPath,
-                List<Integer> genreIds,
-                TipoConteudo tipoConteudo
-        ) {
-                this(
-                        id, title, overview, voteAverage, releaseDate,
-                        posterPath, backdropPath, genreIds, tipoConteudo,
-                        null, null
-                );
-        }
-
-        public FilmeDTO comTipo(TipoConteudo tipo) {
-                return new FilmeDTO(
-                        id,
-                        title,
-                        overview,
-                        voteAverage,
-                        releaseDate,
-                        posterPath,
-                        backdropPath,
-                        genreIds,
-                        tipo,
-                        ondeAssistir,
-                        genres
-                );
+        public FilmeDTO comGeneros(TipoConteudo tipo, java.util.Map<Integer, String> nomes) {
+            return new FilmeDTO(id, title, overview, voteAverage, releaseDate, posterPath,
+                backdropPath, genreIds, tipo, ondeAssistir, genreIds == null ? genres :
+                genreIds.stream().map(nomes::get).filter(java.util.Objects::nonNull).toList());
         }
 }

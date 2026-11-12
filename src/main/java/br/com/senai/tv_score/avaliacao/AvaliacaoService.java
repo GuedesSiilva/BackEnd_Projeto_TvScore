@@ -154,4 +154,18 @@ public class AvaliacaoService {
         }
         return comentario == null ? null : comentario.strip();
     }
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<AvaliacaoDTO> listarPorUsuario(Usuario usuario, int pagina, int tamanho) {
+        if (pagina < 0 || tamanho < 1 || tamanho > 100) throw new IllegalArgumentException("P?gina inv?lida; tamanho entre 1 e 100.");
+        return avaliacaoRepository.findByUsuario(usuario, org.springframework.data.domain.PageRequest.of(
+            pagina, tamanho, org.springframework.data.domain.Sort.by("id").ascending())).map(this::paraDTO);
+    }
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<AvaliacaoDTO> listarPorFilme(Long id, TipoConteudo tipo, int pagina, int tamanho) {
+        validarConteudo(id, tipo);
+        if (pagina < 0 || tamanho < 1 || tamanho > 100) throw new IllegalArgumentException("Pagina invalida.");
+        return avaliacaoRepository.findByFilmeSerieIdAndTipoConteudo(id, tipo,
+            org.springframework.data.domain.PageRequest.of(pagina, tamanho,
+                org.springframework.data.domain.Sort.by("id").ascending())).map(this::paraDTO);
+    }
 }

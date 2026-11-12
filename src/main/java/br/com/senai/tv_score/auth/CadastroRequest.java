@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 
 public record CadastroRequest(
         @NotBlank(message = "O nome é obrigatório")
+        @Size(max = 60, message = "O nome deve ter no máximo 60 caracteres")
         String nome,
 
         @NotBlank(message = "Informe um e-mail válido")

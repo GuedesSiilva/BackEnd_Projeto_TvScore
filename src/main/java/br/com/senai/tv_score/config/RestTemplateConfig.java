@@ -18,4 +18,12 @@ public class RestTemplateConfig {
 
         return new RestTemplate(factory);
     }
+    @Bean("recomendadorHttp")
+    public RestTemplate recomendadorHttp(@org.springframework.beans.factory.annotation.Value("${recomendacao.api.timeout-ms:60000}") int timeout) {
+        if (timeout < 1) throw new IllegalArgumentException("Timeout deve ser positivo.");
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(timeout);
+        return new RestTemplate(factory);
+    }
 }

@@ -58,3 +58,5 @@ application-local.yml
 *.key
 *.p12
 *.pfx
+
+.maven-test-cache/

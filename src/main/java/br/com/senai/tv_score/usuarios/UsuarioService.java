@@ -42,7 +42,7 @@ public class UsuarioService {
                         "Usuário não encontrado."
                 ));
 
-        usuario.setNome(dto.nome().strip());
+        usuario.setNome(Usuario.normalizarNome(dto.nome()));
 
         return new UsuarioLogadoResponse(
                 usuario.getNome(),

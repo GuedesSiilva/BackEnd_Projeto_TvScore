@@ -169,3 +169,7 @@ Metadados de filmes, séries e episódios: [The Movie Database (TMDB)](https://w
 ---
 
 <p align="center"><strong>TV Score</strong> · Backend do aplicativo Flutter.</p>
+
+## Revisao de novembro de 2026
+
+Contratos adicionais, transicao JWT, testes isolados e plano de persistencia: [documentacao da implementacao](docs/IMPLEMENTACAO_2026-11-12.md).

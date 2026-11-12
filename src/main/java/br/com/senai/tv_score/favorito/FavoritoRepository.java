@@ -24,4 +24,6 @@ public interface FavoritoRepository extends JpaRepository<Favorito, Long>{
             TipoConteudo tipoConteudo
     );
     void deleteByUsuario(Usuario usuario);
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "usuario")
+    org.springframework.data.domain.Page<Favorito> findByUsuario(Usuario usuario, org.springframework.data.domain.Pageable pagina);
 }

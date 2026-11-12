@@ -18,6 +18,9 @@ import java.util.Objects;
 
 @Service
 public class EpisodioService {
+    private final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(4);
+    @jakarta.annotation.PreDestroy
+    void encerrar() { executor.shutdownNow(); }
 
     private record ChaveTemporada(Long serieId, int temporada) {}
 
@@ -136,8 +139,18 @@ public class EpisodioService {
 
         List<TemporadaDTO> temporadas = new ArrayList<>();
 
-        for (Integer numero : numeros) {
-            temporadas.add(buscarTemporada(serieId, numero));
+        // Lotes limitam tamb?m a fila de consultas.
+        for (int inicio = 0; inicio < numeros.size(); inicio += 4) {
+            var tarefas = numeros.subList(inicio, Math.min(inicio + 4, numeros.size())).stream()
+                .map(numero -> java.util.concurrent.CompletableFuture.supplyAsync(
+                    () -> buscarTemporada(serieId, numero), executor)).toList();
+            for (var tarefa : tarefas) {
+                try { temporadas.add(tarefa.join()); }
+                catch (java.util.concurrent.CompletionException ex) {
+                    if (ex.getCause() instanceof RuntimeException causa) throw causa;
+                    throw ex;
+                }
+            }
         }
 
         LocalDate hoje = LocalDate.now(ZoneOffset.UTC);

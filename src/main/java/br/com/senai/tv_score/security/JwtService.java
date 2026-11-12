@@ -45,11 +45,11 @@ public class JwtService {
         this.parser = Jwts.parser().verifyWith(signingKey).build();
     }
 
-    public String gerarToken(String email) {
+    public String gerarToken(Long usuarioId) {
         Instant agora = Instant.now();
 
         return Jwts.builder()
-                .subject(email)
+                .subject("usuario:" + java.util.Objects.requireNonNull(usuarioId))
                 .issuedAt(Date.from(agora))
                 .expiration(
                         Date.from(agora.plusSeconds(expirationSeconds))
@@ -58,14 +58,15 @@ public class JwtService {
                 .compact();
     }
 
-    public Optional<String> extrairEmailSeValido(String token) {
+    public Optional<Long> extrairUsuarioIdSeValido(String token) {
         try {
             Claims claims = parser.parseSignedClaims(token).getPayload();
-            String email = claims.getSubject();
-            if (claims.getExpiration() == null || email == null || email.isBlank()) {
+            String subject = claims.getSubject();
+            if (claims.getExpiration() == null || subject == null || subject.isBlank()) {
                 return Optional.empty();
             }
-            return Optional.of(email);
+            if (!subject.matches("usuario:[1-9][0-9]*")) return Optional.empty();
+            return Optional.of(Long.parseLong(subject.substring(8)));
         } catch (JwtException | IllegalArgumentException ex) {
             return Optional.empty();
         }

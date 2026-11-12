@@ -50,4 +50,9 @@ public class Usuario {
         this.email = email;
         this.senha = senha;
     }
+    public static String normalizarNome(String nome) {
+        if (nome == null || nome.isBlank() || nome.strip().length() > 60)
+            throw new IllegalArgumentException("Nome obrigatorio, com ate 60 caracteres.");
+        return nome.strip();
+    }
 }

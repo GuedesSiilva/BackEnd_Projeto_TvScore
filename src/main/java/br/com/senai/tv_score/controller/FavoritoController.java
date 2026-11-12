@@ -51,4 +51,9 @@ public class FavoritoController {
 
         return ResponseEntity.noContent().build();
     }
+    @GetMapping("/paginados")
+    public org.springframework.data.domain.Page<FavoritoDTO> paginados(@AuthenticationPrincipal Usuario usuario,
+            @RequestParam(defaultValue = "0") int pagina, @RequestParam(defaultValue = "20") int tamanho) {
+        return favoritoService.listarFavoritos(usuario, pagina, tamanho);
+    }
 }

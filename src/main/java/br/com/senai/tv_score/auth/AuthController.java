@@ -1,6 +1,5 @@
 package br.com.senai.tv_score.auth;
 
-import br.com.senai.tv_score.exceptions.ErroResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +21,6 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
-        if (response == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErroResponse("E-mail ou senha inválidos"));
-        }
         return ResponseEntity.ok(response);
     }
 

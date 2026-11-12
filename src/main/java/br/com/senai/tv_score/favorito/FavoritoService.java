@@ -35,9 +35,7 @@ public class FavoritoService {
                 );
 
         if (existente) {
-            throw new IllegalArgumentException(
-                    "Filme/Série já está nos favoritos."
-            );
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Favorito duplicado.");
         }
 
         Favorito favorito = new Favorito(
@@ -63,7 +61,7 @@ public class FavoritoService {
                 );
 
         if (!existente) {
-            throw new IllegalArgumentException("Favorito não encontrado.");
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Favorito inexistente.");
         }
 
         favoritoRepository.deleteByUsuarioAndFilmeSerieIdAndTipoConteudo(
@@ -80,5 +78,11 @@ public class FavoritoService {
                 favorito.getDataAdicionado(),
                 favorito.getTipoConteudo()
         );
+    }
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<FavoritoDTO> listarFavoritos(Usuario usuario, int pagina, int tamanho) {
+        if (pagina < 0 || tamanho < 1 || tamanho > 100) throw new IllegalArgumentException("P?gina inv?lida; tamanho entre 1 e 100.");
+        return favoritoRepository.findByUsuario(usuario, org.springframework.data.domain.PageRequest.of(
+            pagina, tamanho, org.springframework.data.domain.Sort.by("id").ascending())).map(this::paraDTO);
     }
 }

@@ -85,4 +85,15 @@ public class AvaliacaoController {
                 )
         );
     }
+    @GetMapping("/minhas/paginadas")
+    public org.springframework.data.domain.Page<AvaliacaoDTO> paginados(@AuthenticationPrincipal Usuario usuario,
+            @RequestParam(defaultValue = "0") int pagina, @RequestParam(defaultValue = "20") int tamanho) {
+        return avaliacaoService.listarPorUsuario(usuario, pagina, tamanho);
+    }
+    @GetMapping("/filme/{filmeSerieId}/paginadas")
+    public org.springframework.data.domain.Page<AvaliacaoDTO> porConteudoPaginado(@PathVariable Long filmeSerieId,
+        @RequestParam TipoConteudo tipoConteudo, @RequestParam(defaultValue = "0") int pagina,
+        @RequestParam(defaultValue = "20") int tamanho) {
+        return avaliacaoService.listarPorFilme(filmeSerieId, tipoConteudo, pagina, tamanho);
+    }
 }
