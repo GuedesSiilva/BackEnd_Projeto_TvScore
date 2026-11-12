@@ -352,6 +352,21 @@ public class FilmeService {
         return executarBusca(builder);
     }
 
+    public TmdbResponseDTO buscarOpcoesFilmesPreferidos(java.util.Set<String> codigos, int pagina) {
+        UriComponentsBuilder consulta = criarBuscaFilmes(pagina)
+                .queryParam("sort_by", "popularity.desc")
+                .queryParam("vote_count.gte", 100);
+        if (!codigos.isEmpty()) {
+            String ids = generos.idsFilmes(codigos).stream().map(String::valueOf)
+                    .collect(java.util.stream.Collectors.joining("|"));
+            // Um gênero pode existir somente em séries. Nesse caso, oferece filmes populares.
+            if (!ids.isEmpty()) {
+                consulta.queryParam("with_genres", ids);
+            }
+        }
+        return consultarLista(consulta, TipoConteudo.MOVIE);
+    }
+
     public TmdbResponseDTO buscarCatalogo(int pagina) {
         UriComponentsBuilder builder = criarBuscaFilmes(pagina)
                 .queryParam("sort_by", "popularity.desc");

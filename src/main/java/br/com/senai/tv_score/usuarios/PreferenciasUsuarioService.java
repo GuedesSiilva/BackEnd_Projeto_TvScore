@@ -75,8 +75,8 @@ public class PreferenciasUsuarioService {
             List<GeneroConteudoDTO> catalogo
     ) {
         List<GeneroConteudoDTO> selecionados = usuario.getGenerosPreferidos().stream()
-            .map(codigo -> catalogo.stream().filter(g -> g.codigo().equals(codigo)).findFirst()
-                .orElse(new GeneroConteudoDTO(codigo, codigo))).toList();
+            .map(codigo -> catalogo.stream().filter(g -> g.codigo().equals(codigo) || GeneroService.codigoDoNome(g.nome()).equalsIgnoreCase(codigo)).findFirst()
+                .map(g -> new GeneroConteudoDTO(codigo, g.nome())).orElse(new GeneroConteudoDTO(codigo, codigo))).toList();
 
         return new PreferenciasGenerosResponseDTO(selecionados);
     }

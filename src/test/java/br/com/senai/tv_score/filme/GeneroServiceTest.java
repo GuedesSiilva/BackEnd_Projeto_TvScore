@@ -18,6 +18,11 @@ class GeneroServiceTest {
     assertEquals(777L,servico.resolverGenero("tmdb-777").generoFilmeId());
     assertNull(servico.resolverGenero("tmdb-888").generoFilmeId());
     assertEquals(888L,servico.resolverGenero("tmdb-888").generoSerieId());
+    assertEquals("tmdb-777", servico.resolverGenero(" NOVO ").codigo());
+    assertEquals("drama", servico.resolverGenero("tmdb-18").codigo());
+    assertEquals(List.of(18L, 777L), servico.idsFilmes(java.util.Set.of("drama", "tmdb-777")));
+    assertEquals(List.of(18L, 777L), servico.idsFilmes(java.util.Set.of("tmdb-18", "novo")));
+    assertTrue(servico.idsFilmes(java.util.Set.of("tmdb-888")).isEmpty());
     verify(tmdb,times(2)).buscar(any(UriComponentsBuilder.class),eq(GeneroResponseDTO.class));
  }
 }

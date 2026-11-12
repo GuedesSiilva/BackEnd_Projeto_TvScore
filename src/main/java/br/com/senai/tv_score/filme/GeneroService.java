@@ -7,16 +7,12 @@ import org.springframework.web.client.RestClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.util.UriComponentsBuilder;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.net.URI;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Objects;
 
@@ -53,7 +49,7 @@ public class GeneroService {
             }
             Map<Integer, String> nomes = new HashMap<>();
             for (GeneroDTO genero : resposta.genres()) {
-                if (genero != null && genero.id() != null
+                if (genero != null && genero.id() != null && genero.id() > 0
                         && genero.name() != null && !genero.name().isBlank()) {
                     nomes.put(Math.toIntExact(genero.id()), genero.name());
                 }
@@ -169,10 +165,30 @@ public class GeneroService {
         return listarGenerosDisponiveis().stream()
                 .filter(genero ->
                         genero.codigo().equalsIgnoreCase(codigo.strip())
+                                || ("tmdb-" + (genero.generoFilmeId() == null ? genero.generoSerieId() : genero.generoFilmeId())).equalsIgnoreCase(codigo.strip())
+                                || codigoDoNome(genero.nome()).equalsIgnoreCase(codigo.strip())
                 )
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Gênero inválido. Consulte /api/conteudos/generos."
                 ));
+    }
+    // Aceita aliases por nome do fluxo remoto sem trocar os codigos ja persistidos.
+    public static String codigoDoNome(String nome) {
+        return java.text.Normalizer.normalize(nome, java.text.Normalizer.Form.NFD)
+            .replaceAll("\\p{M}+", "").toLowerCase(java.util.Locale.ROOT)
+            .replaceAll("[^a-z0-9]+", "-").replaceAll("^-|-$", "");
+    }
+
+    public boolean correspondeCodigo(java.util.Set<String> codigos, Long id, String nome) {
+        return codigos.stream().filter(Objects::nonNull).anyMatch(codigo ->
+            codigoGenero(id).equalsIgnoreCase(codigo.strip())
+                || ("tmdb-" + id).equalsIgnoreCase(codigo.strip())
+                || codigoDoNome(nome).equalsIgnoreCase(codigo.strip()));
+    }
+    public List<Long> idsFilmes(java.util.Set<String> codigos) {
+        return catalogoGeneros(TipoConteudo.MOVIE).nomes().entrySet().stream()
+            .filter(g -> correspondeCodigo(codigos, g.getKey().longValue(), g.getValue()))
+            .map(g -> g.getKey().longValue()).sorted().toList();
     }
 }
