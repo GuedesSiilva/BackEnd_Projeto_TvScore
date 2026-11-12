@@ -14,7 +14,8 @@ import java.util.Map;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Objects;
@@ -154,12 +155,41 @@ public class FilmeService {
 
     // Retorna a lista única de gêneros para o Flutter.
     public List<GeneroConteudoDTO> listarGenerosConteudo() {
-        return Arrays.stream(GeneroConteudo.values())
-                .map(genero -> new GeneroConteudoDTO(
-                        genero.getCodigo(),
-                        genero.getNome()
-                ))
+        return generosConteudo().values().stream()
+                .sorted(Comparator.comparing(GeneroConteudo::codigo))
+                .map(genero -> new GeneroConteudoDTO(genero.codigo(), genero.nome()))
                 .toList();
+    }
+
+    private Map<String, GeneroConteudo> generosConteudo() {
+        Map<String, GeneroConteudo> generos = new LinkedHashMap<>();
+        for (TipoConteudo tipo : TipoConteudo.values()) {
+            catalogoGeneros(tipo).nomes().forEach((id, nome) -> {
+                String codigo = GeneroConteudo.codigoDoNome(nome);
+                GeneroConteudo anterior = generos.get(codigo);
+                Long filmeId = tipo == TipoConteudo.MOVIE ? Long.valueOf(id.longValue())
+                        : anterior == null ? null : anterior.generoFilmeId();
+                Long serieId = tipo == TipoConteudo.TV ? Long.valueOf(id.longValue())
+                        : anterior == null ? null : anterior.generoSerieId();
+                generos.put(codigo, new GeneroConteudo(codigo, nome, filmeId, serieId));
+            });
+        }
+        return generos;
+    }
+
+    public GeneroConteudo buscarGeneroConteudo(String codigo) {
+        if (codigo == null || codigo.isBlank()) {
+            throw new IllegalArgumentException("Informe um gênero.");
+        }
+        GeneroConteudo genero = generosConteudo().get(
+                codigo.trim().toLowerCase(java.util.Locale.ROOT)
+        );
+        if (genero == null) {
+            throw new IllegalArgumentException(
+                    "Gênero inválido. Consulte /api/conteudos/generos."
+            );
+        }
+        return genero;
     }
 
     // Recebe um único gênero e retorna filmes e séries juntos.
@@ -169,17 +199,22 @@ public class FilmeService {
     ) {
         validarPagina(pagina);
 
-        GeneroConteudo genero = GeneroConteudo.porCodigo(codigoGenero);
+        GeneroConteudo genero = buscarGeneroConteudo(codigoGenero);
 
-        TmdbResponseDTO filmes = buscarPorGenero(
-                genero.getGeneroFilmeId(),
+        TmdbResponseDTO filmes = genero.generoFilmeId() == null
+                ? new TmdbResponseDTO(List.of(), pagina, 0, 0)
+                : buscarPorGenero(
+                genero.generoFilmeId(),
                 TipoConteudo.MOVIE,
                 pagina
         );
 
-        TmdbResponseDTO series = buscarPorGenero(
-                genero.getGeneroSerieId(),
-                TipoConteudo.TV,                pagina
+        TmdbResponseDTO series = genero.generoSerieId() == null
+                ? new TmdbResponseDTO(List.of(), pagina, 0, 0)
+                : buscarPorGenero(
+                genero.generoSerieId(),
+                TipoConteudo.TV,
+                pagina
         );
 
         List<FilmeDTO> resultados = new ArrayList<>();
@@ -409,7 +444,7 @@ public class FilmeService {
             }
             Map<Integer, String> nomes = new HashMap<>();
             for (GeneroDTO genero : resposta.genres()) {
-                if (genero != null && genero.id() != null
+                if (genero != null && genero.id() != null && genero.id() > 0
                         && genero.name() != null && !genero.name().isBlank()) {
                     nomes.put(Math.toIntExact(genero.id()), genero.name());
                 }

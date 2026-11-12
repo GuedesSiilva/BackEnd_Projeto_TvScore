@@ -4,23 +4,26 @@ import br.com.senai.tv_score.dto.GeneroConteudoDTO;
 import br.com.senai.tv_score.dto.PreferenciasGenerosRequestDTO;
 import br.com.senai.tv_score.dto.PreferenciasGenerosResponseDTO;
 import br.com.senai.tv_score.filme.GeneroConteudo;
+import br.com.senai.tv_score.filme.FilmeService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Service
 public class PreferenciasUsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final FilmeService filmeService;
 
     public PreferenciasUsuarioService(
-            UsuarioRepository usuarioRepository
+            UsuarioRepository usuarioRepository,
+            FilmeService filmeService
     ) {
         this.usuarioRepository = usuarioRepository;
+        this.filmeService = filmeService;
     }
 
     @Transactional(readOnly = true)
@@ -44,8 +47,8 @@ public class PreferenciasUsuarioService {
 
         // Valida todos os códigos antes de modificar a seleção.
         List<String> codigos = dto.generos().stream()
-                .map(GeneroConteudo::porCodigo)
-                .map(GeneroConteudo::getCodigo)
+                .map(filmeService::buscarGeneroConteudo)
+                .map(GeneroConteudo::codigo)
                 .distinct()
                 .toList();
 
@@ -62,15 +65,8 @@ public class PreferenciasUsuarioService {
 
     private PreferenciasGenerosResponseDTO paraDTO(Usuario usuario) {
         List<GeneroConteudoDTO> selecionados =
-                Arrays.stream(GeneroConteudo.values())
-                        .filter(genero ->
-                                usuario.getGenerosPreferidos()
-                                        .contains(genero.getCodigo())
-                        )
-                        .map(genero -> new GeneroConteudoDTO(
-                                genero.getCodigo(),
-                                genero.getNome()
-                        ))
+                filmeService.listarGenerosConteudo().stream()
+                        .filter(genero -> usuario.getGenerosPreferidos().contains(genero.codigo()))
                         .toList();
 
         return new PreferenciasGenerosResponseDTO(selecionados);

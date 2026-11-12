@@ -119,7 +119,7 @@ Nas rotas autenticadas, use `Authorization: Bearer <token>`. Consulte o Swagger 
 ## Integração com o Flutter
 
 - **Identificação de títulos:** use o ID do TMDB junto com `tipoConteudo` (`MOVIE` ou `TV`). Filmes e séries podem ter o mesmo ID numérico.
-- **Gêneros:** pesquisa e detalhes retornam `genres`, uma lista de nomes. Outras listagens podem usar `genre_ids`. No filtro misto e nas preferências, use os códigos de `/api/conteudos/generos`, como `drama`.
+- **Gêneros:** pesquisa e detalhes retornam `genres`, uma lista de nomes. Outras listagens podem usar `genre_ids`. No filtro misto e nas preferências, use os códigos de `/api/conteudos/generos`, como `drama`. Essa lista reúne os gêneros de filmes e séries consultados no TMDB, com cache de seis horas, sem uma lista fixa local. Os códigos são os nomes sem acentos, em minúsculas e com hífens no lugar dos espaços (ex.: `ficcao-cientifica`); os oito códigos anteriores continuam compatíveis. Gêneros exclusivos de filmes ou de séries filtram somente o tipo correspondente.
 - **Onde assistir:** o campo opcional `ondeAssistir` vem nos detalhes, com grupos como `assinatura`, `aluguel` e `compra`. O `link` aponta para a página de disponibilidade do título; a API não retorna um link direto para cada streaming.
 - **Avaliações:** o `POST` recebe `filmeSerieId`, `tipoConteudo`, `nota` e `comentario`. Se já houver avaliação do mesmo usuário para aquele título e tipo, o `POST` a atualiza. O `PUT` usa o `id` da avaliação e recebe `nota` e `comentario`. Omitir o comentário no `PUT` limpa o valor anterior.
 
