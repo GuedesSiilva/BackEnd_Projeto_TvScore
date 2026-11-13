@@ -41,10 +41,58 @@ class FilmesPreferidosPersistenciaTest {
         when(tmdb.buscar(any(UriComponentsBuilder.class), eq(FilmePreferidoTmdbDTO.class)))
                 .thenAnswer(inv -> {
                     var uri = ((UriComponentsBuilder) inv.getArgument(0)).build().toUri();
-                    long id = Long.parseLong(uri.getPath().substring("/movie/".length()));
-                    return new FilmePreferidoTmdbDTO(id, "Filme " + id, "Sinopse",
+                    long id = Long.parseLong(uri.getPath().substring(uri.getPath().lastIndexOf('/') + 1));
+                    return new FilmePreferidoTmdbDTO(id, uri.getPath(), "Sinopse",
                             List.of(new GeneroDTO(18L, "Drama")), "en", "1999-10-15", 8.4, 20.0, "/poster.jpg");
                 });
+    }
+
+    private ConteudoPreferidoRequestDTO item(long id, br.com.senai.tv_score.filme.TipoConteudo tipo) {
+        return new ConteudoPreferidoRequestDTO(id, tipo);
+    }
+
+    @Test
+    void mesmoIdNosDoisTiposDeduplicaParPreservaTimestampELegadoPreservaSeries() {
+        var movie = item(550L, br.com.senai.tv_score.filme.TipoConteudo.MOVIE);
+        var tv = item(550L, br.com.senai.tv_score.filme.TipoConteudo.TV);
+        service.salvarConteudos(usuario, new ConteudosPreferidosRequestDTO(List.of(movie, tv, tv)));
+        em.clear();
+        var salvos = service.consultarConteudos(usuario).conteudos();
+        assertEquals(2, salvos.size());
+        assertEquals("/movie/550", salvos.get(0).titulo());
+        assertEquals("/tv/550", salvos.get(1).titulo());
+        var timestamp = salvos.get(1).selecionadoEm();
+        service.salvarConteudos(usuario, new ConteudosPreferidosRequestDTO(List.of(movie, tv)));
+        em.clear();
+        assertEquals(timestamp, service.consultarConteudos(usuario).conteudos().get(1).selecionadoEm());
+        assertEquals(1, service.consultar(usuario).filmes().size());
+        service.salvar(usuario, new FilmesPreferidosRequestDTO(List.of()));
+        em.clear();
+        assertTrue(service.consultar(usuario).filmes().isEmpty());
+        assertEquals(timestamp, service.consultarConteudos(usuario).conteudos().getFirst().selecionadoEm());
+        service.salvarConteudos(usuario, new ConteudosPreferidosRequestDTO(List.of()));
+        em.clear();
+        assertEquals(0, filmes.count());
+        assertEquals(0L, em.createNativeQuery("select count(*) from usuario_filme_preferido_genero", Long.class).getSingleResult());
+    }
+
+    @Test
+    void limiteLegadoContaSeriesSemAlterarSelecao() {
+        service.salvarConteudos(usuario, new ConteudosPreferidosRequestDTO(List.of(item(1, br.com.senai.tv_score.filme.TipoConteudo.TV))));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> service.salvar(usuario, new FilmesPreferidosRequestDTO(List.of(2L, 3L, 4L, 5L, 6L))));
+        assertEquals(1, filmes.count());
+    }
+
+    @Test
+    void bancoRejeitaMesmoParDuplicado() {
+        var dados = new FilmePreferidoTmdbDTO(550L, "Título", "Sinopse", List.of(), "en", "2020-01-01", 8.0, 1.0, null);
+        var primeiro = new FilmePreferido(usuario, 550L);
+        primeiro.atualizarDados(dados);
+        filmes.saveAndFlush(primeiro);
+        var duplicado = new FilmePreferido(usuario, 550L);
+        duplicado.atualizarDados(dados);
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class, () -> filmes.saveAndFlush(duplicado));
     }
 
     @Test
@@ -76,6 +124,7 @@ class FilmesPreferidosPersistenciaTest {
         outro.setNome("Outro"); outro.setEmail("outro@tvscore.com"); outro.setSenha("hash");
         outro = usuarios.saveAndFlush(outro);
         assertTrue(service.consultar(outro).filmes().isEmpty());
+        assertTrue(service.consultarConteudos(outro).conteudos().isEmpty());
         service.salvar(outro, new FilmesPreferidosRequestDTO(List.of(551L)));
         assertEquals(550L, service.consultar(usuario).filmes().getFirst().filmeId());
         assertEquals(551L, service.consultar(outro).filmes().getFirst().filmeId());
@@ -83,7 +132,9 @@ class FilmesPreferidosPersistenciaTest {
 
     @Test
     void excluirContaRemoveSelecaoEGenerosRelacionados() {
-        service.salvar(usuario, new FilmesPreferidosRequestDTO(List.of(550L)));
+        service.salvarConteudos(usuario, new ConteudosPreferidosRequestDTO(List.of(
+                item(550L, br.com.senai.tv_score.filme.TipoConteudo.MOVIE),
+                item(550L, br.com.senai.tv_score.filme.TipoConteudo.TV))));
         when(encoder.matches("senha", "hash")).thenReturn(true);
         usuarioService.excluir(usuario, new ExcluirContaDTO("senha"));
         em.clear();

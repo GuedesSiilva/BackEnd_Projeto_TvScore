@@ -2,6 +2,7 @@ package br.com.senai.tv_score.usuarios;
 
 import br.com.senai.tv_score.dto.FilmePreferidoTmdbDTO;
 import jakarta.persistence.*;
+import br.com.senai.tv_score.filme.TipoConteudo;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
@@ -11,7 +12,7 @@ import java.util.Map;
 
 @Entity
 @Table(name = "usuario_filme_preferido", uniqueConstraints = @UniqueConstraint(
-        name = "uk_usuario_filme_preferido", columnNames = {"usuario_id", "filme_id"}
+        name = "uk_usuario_conteudo_preferido", columnNames = {"usuario_id", "filme_id", "tipo_conteudo"}
 ))
 @Getter
 @NoArgsConstructor
@@ -26,6 +27,10 @@ public class FilmePreferido {
 
     @Column(name = "filme_id", nullable = false)
     private Long filmeId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_conteudo", nullable = false, length = 5)
+    private TipoConteudo tipoConteudo = TipoConteudo.MOVIE;
 
     @Column(nullable = false, length = 1000)
     private String titulo;
@@ -59,6 +64,11 @@ public class FilmePreferido {
     private LocalDateTime selecionadoEm;
 
     public FilmePreferido(Usuario usuario, Long filmeId) {
+        this(usuario, filmeId, TipoConteudo.MOVIE);
+    }
+
+    public FilmePreferido(Usuario usuario, Long filmeId, TipoConteudo tipo) {
+        this.tipoConteudo = tipo;
         this.usuario = usuario;
         this.filmeId = filmeId;
     }

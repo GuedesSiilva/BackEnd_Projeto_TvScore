@@ -177,6 +177,10 @@ public class FilmeService {
                 pagina
         );
 
+        return intercalar(filmes, series, pagina);
+    }
+
+    private TmdbResponseDTO intercalar(TmdbResponseDTO filmes, TmdbResponseDTO series, int pagina) {
         List<FilmeDTO> resultados = new ArrayList<>();
 
         int maiorLista = Math.max(
@@ -353,18 +357,34 @@ public class FilmeService {
     }
 
     public TmdbResponseDTO buscarOpcoesFilmesPreferidos(java.util.Set<String> codigos, int pagina) {
-        UriComponentsBuilder consulta = criarBuscaFilmes(pagina)
-                .queryParam("sort_by", "popularity.desc")
-                .queryParam("vote_count.gte", 100);
-        if (!codigos.isEmpty()) {
-            String ids = generos.idsFilmes(codigos).stream().map(String::valueOf)
-                    .collect(java.util.stream.Collectors.joining("|"));
-            // Um gênero pode existir somente em séries. Nesse caso, oferece filmes populares.
-            if (!ids.isEmpty()) {
-                consulta.queryParam("with_genres", ids);
-            }
+        validarPagina(pagina);
+        return intercalar(opcoesPorTipo(codigos, TipoConteudo.MOVIE, pagina),
+                opcoesPorTipo(codigos, TipoConteudo.TV, pagina), pagina);
+    }
+
+    private record FiltroPreferidos(TipoConteudo tipo, List<Long> generos) {}
+    private final CacheTmdb<FiltroPreferidos, TmdbResponseDTO> cacheOpcoes =
+            new CacheTmdb<>(Duration.ofMinutes(5), 128);
+
+    private TmdbResponseDTO opcoesPorTipo(java.util.Set<String> codigos, TipoConteudo tipo, int pagina) {
+        List<Long> ids = codigos.isEmpty() ? List.of() : generos.idsPorTipo(codigos, tipo);
+        if (!codigos.isEmpty() && ids.isEmpty()) return paginaVazia(pagina);
+        FiltroPreferidos filtro = new FiltroPreferidos(tipo, ids);
+        TmdbResponseDTO primeira = cacheOpcoes.buscar(filtro, () -> consultarOpcoes(filtro, 1));
+        if (pagina == 1) return primeira;
+        if (primeira.totalPages() != null && pagina > primeira.totalPages()) {
+            return new TmdbResponseDTO(List.of(), pagina, primeira.totalPages(), primeira.totalResults());
         }
-        return consultarLista(consulta, TipoConteudo.MOVIE);
+        return consultarOpcoes(filtro, pagina);
+    }
+
+    private TmdbResponseDTO consultarOpcoes(FiltroPreferidos filtro, int pagina) {
+        var consulta = tmdb.consulta(filtro.tipo() == TipoConteudo.MOVIE ? "/discover/movie" : "/discover/tv")
+                .queryParam("include_adult", false).queryParam("page", pagina)
+                .queryParam("sort_by", "popularity.desc").queryParam("vote_count.gte", 100);
+        if (!filtro.generos().isEmpty()) consulta.queryParam("with_genres", filtro.generos().stream()
+                .map(String::valueOf).collect(java.util.stream.Collectors.joining("|")));
+        return consultarLista(consulta, filtro.tipo());
     }
 
     public TmdbResponseDTO buscarCatalogo(int pagina) {

@@ -187,7 +187,10 @@ public class GeneroService {
                 || codigoDoNome(nome).equalsIgnoreCase(codigo.strip()));
     }
     public List<Long> idsFilmes(java.util.Set<String> codigos) {
-        return catalogoGeneros(TipoConteudo.MOVIE).nomes().entrySet().stream()
+        return idsPorTipo(codigos, TipoConteudo.MOVIE);
+    }
+    public List<Long> idsPorTipo(java.util.Set<String> codigos, TipoConteudo tipo) {
+        return catalogoGeneros(tipo).nomes().entrySet().stream()
             .filter(g -> correspondeCodigo(codigos, g.getKey().longValue(), g.getValue()))
             .map(g -> g.getKey().longValue()).sorted().toList();
     }

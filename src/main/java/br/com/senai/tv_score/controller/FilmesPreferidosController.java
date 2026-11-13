@@ -28,7 +28,8 @@ public class FilmesPreferidosController {
     }
 
     @PutMapping
-    @Operation(summary = "Substitui a seleção de até cinco filmes e salva dados do TMDB para recomendação")
+    @Operation(summary = "Substitui somente os filmes selecionados, preservando séries",
+            description = "Contrato legado: IDs são MOVIE. O limite de cinco inclui as séries já selecionadas.")
     public ResponseEntity<FilmesPreferidosResponseDTO> salvar(
             @AuthenticationPrincipal Usuario usuario,
             @Valid @RequestBody FilmesPreferidosRequestDTO dto) {

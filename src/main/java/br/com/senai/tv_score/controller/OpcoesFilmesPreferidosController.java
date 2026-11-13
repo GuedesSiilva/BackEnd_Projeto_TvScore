@@ -10,7 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/usuarios/eu/filmes-preferidos/opcoes")
+@RequestMapping({"/api/usuarios/eu/filmes-preferidos/opcoes", "/api/usuarios/eu/conteudos-preferidos/opcoes"})
 public class OpcoesFilmesPreferidosController {
     private final OpcoesFilmesPreferidosService service;
 
@@ -19,7 +19,8 @@ public class OpcoesFilmesPreferidosController {
     }
 
     @GetMapping
-    @Operation(summary = "Filmes para a segunda etapa, relacionados aos gêneros escolhidos")
+    @Operation(summary = "Filmes e séries para a segunda etapa, relacionados aos gêneros escolhidos",
+            description = "Intercala a página de cada tipo, até 40 itens; totais somados e máximo de páginas. Não é ordem global de popularidade.")
     public ResponseEntity<TmdbResponseDTO> consultar(
             @AuthenticationPrincipal Usuario usuario,
             @RequestParam(defaultValue = "1") int pagina) {

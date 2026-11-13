@@ -23,7 +23,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({FilmesPreferidosController.class, OpcoesFilmesPreferidosController.class})
+@WebMvcTest({FilmesPreferidosController.class, ConteudosPreferidosController.class, OpcoesFilmesPreferidosController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class FilmesPreferidosControllerTest {
     private static final String ROTA = "/api/usuarios/eu/filmes-preferidos";
@@ -35,6 +35,44 @@ class FilmesPreferidosControllerTest {
     @MockitoBean private JwtService jwt;
     @MockitoBean private UsuarioRepository usuarios;
     private Usuario usuario;
+
+    @Test
+    void rotasGenericasExigemJwt() throws Exception {
+        String rota = "/api/usuarios/eu/conteudos-preferidos";
+        mvc.perform(get(rota)).andExpect(status().isUnauthorized());
+        mvc.perform(get(rota + "/opcoes")).andExpect(status().isUnauthorized());
+        mvc.perform(put(rota).contentType(MediaType.APPLICATION_JSON).content("{\"conteudos\":[]}"))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(service, opcoes);
+    }
+
+    @Test
+    void contratoGenericoValidaItensAninhados() throws Exception {
+        for (String corpo : List.of("{}", "{\"conteudos\":null}", "{\"conteudos\":[null]}",
+                "{\"conteudos\":[{\"id\":0,\"tipoConteudo\":\"TV\"}]}",
+                "{\"conteudos\":[{\"id\":1}]}", "{\"conteudos\":[{\"tipoConteudo\":\"MOVIE\"}]}",
+                "{\"conteudos\":[{\"id\":1,\"tipoConteudo\":\"INVALIDO\"}]}",
+                "{\"conteudos\":[{\"id\":1,\"tipoConteudo\":\"TV\"},{\"id\":2,\"tipoConteudo\":\"TV\"},{\"id\":3,\"tipoConteudo\":\"TV\"},{\"id\":4,\"tipoConteudo\":\"TV\"},{\"id\":5,\"tipoConteudo\":\"TV\"},{\"id\":6,\"tipoConteudo\":\"TV\"}]}")) {
+            mvc.perform(put("/api/usuarios/eu/conteudos-preferidos").header("Authorization", "Bearer teste")
+                    .contentType(MediaType.APPLICATION_JSON).content(corpo)).andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void contratoGenericoUsaUsuarioDoToken() throws Exception {
+        var dto = new br.com.senai.tv_score.dto.ConteudosPreferidosRequestDTO(List.of(
+                new br.com.senai.tv_score.dto.ConteudoPreferidoRequestDTO(550L, br.com.senai.tv_score.filme.TipoConteudo.TV)));
+        when(service.salvarConteudos(usuario, dto)).thenReturn(new br.com.senai.tv_score.dto.ConteudosPreferidosResponseDTO(List.of()));
+        mvc.perform(put("/api/usuarios/eu/conteudos-preferidos").header("Authorization", "Bearer teste")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"conteudos\":[{\"id\":550,\"tipoConteudo\":\"TV\"}]}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.conteudos").isArray());
+        verify(service).salvarConteudos(usuario, dto);
+        when(service.consultarConteudos(usuario)).thenReturn(new br.com.senai.tv_score.dto.ConteudosPreferidosResponseDTO(List.of()));
+        mvc.perform(get("/api/usuarios/eu/conteudos-preferidos").header("Authorization", "Bearer teste"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.conteudos").isArray());
+        verify(service).consultarConteudos(usuario);
+    }
 
     @BeforeEach
     void autenticar() {

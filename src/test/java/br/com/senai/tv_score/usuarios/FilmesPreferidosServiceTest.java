@@ -43,6 +43,31 @@ class FilmesPreferidosServiceTest {
     }
 
     @Test
+    void serieReconheceAliasesEDeduplicaPar() {
+        servidor.expect(requestTo("https://tmdb.test/3/tv/550?api_key=teste&language=pt-BR"))
+                .andRespond(withSuccess("{\"id\":550,\"name\":\"Série\",\"first_air_date\":\"2011-04-17\",\"genres\":[]}", MediaType.APPLICATION_JSON));
+        var item = new ConteudoPreferidoRequestDTO(550L, br.com.senai.tv_score.filme.TipoConteudo.TV);
+        var resposta = service.salvarConteudos(usuario, new ConteudosPreferidosRequestDTO(List.of(item, item)));
+        assertEquals(1, resposta.conteudos().size());
+        assertEquals("Série", resposta.conteudos().getFirst().titulo());
+        assertEquals("2011-04-17", resposta.conteudos().getFirst().dataLancamento());
+        servidor.verify();
+    }
+
+    @Test
+    void falhaNaSerieNaoModificaHistorico() {
+        respostaTmdb(550, "{\"id\":550,\"title\":\"Filme\",\"genres\":[]}");
+        servidor.expect(requestTo("https://tmdb.test/3/tv/550?api_key=teste&language=pt-BR"))
+                .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+        assertThrows(ResponseStatusException.class, () -> service.salvarConteudos(usuario,
+                new ConteudosPreferidosRequestDTO(List.of(
+                        new ConteudoPreferidoRequestDTO(550L, br.com.senai.tv_score.filme.TipoConteudo.MOVIE),
+                        new ConteudoPreferidoRequestDTO(550L, br.com.senai.tv_score.filme.TipoConteudo.TV)))));
+        verifyNoInteractions(filmes, usuarios);
+        servidor.verify();
+    }
+
+    @Test
     void buscaDadosNoTmdbEDeduplicaSelecao() {
         respostaTmdb(550, """
                 {"id":550,"title":"Clube da Luta","overview":"Sinopse de teste",
