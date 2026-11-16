@@ -20,6 +20,7 @@ import static org.mockito.Mockito.*;
 @DataJpaTest(showSql = false, properties = {"spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.show-sql=false"})
 @Import({FilmesPreferidosService.class, UsuarioService.class})
 class FilmesPreferidosPersistenciaTest {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean FotoService fotos;
     @Autowired private FilmesPreferidosService service;
     @Autowired private UsuarioService usuarioService;
     @Autowired private UsuarioRepository usuarios;

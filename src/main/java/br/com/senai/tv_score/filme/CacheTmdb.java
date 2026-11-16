@@ -55,8 +55,14 @@ final class CacheTmdb<K, V> {
             return entrada == null ? null : entrada.valor();
         }
     }
+    void guardar(K chave, V valor) {
+        synchronized (valores) {
+            valores.put(chave, new Entrada<>(Objects.requireNonNull(valor), System.nanoTime()));
+            while (valores.size() > capacidade) valores.pollFirstEntry();
+        }
+    }
 
-    private V valorValido(K chave) {
+    V valorValido(K chave) {
         synchronized (valores) {
             Entrada<V> entrada = valores.get(chave);
             return entrada != null && System.nanoTime() - entrada.carregadoEm() < ttlNanos

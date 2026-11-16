@@ -14,6 +14,13 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 public class Usuario {
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.REMOVE)
+    private java.util.List<br.com.senai.tv_score.auth.ResetSenha> resets = new java.util.ArrayList<>();
+    @Column(nullable = false)
+    private long versaoCredenciais = 0;
+
+    @Column(length = 200)
+    private String fotoChave;
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
             name = "usuario_genero",

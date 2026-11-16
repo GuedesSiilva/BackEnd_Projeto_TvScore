@@ -53,6 +53,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/filmes/**",
+                                "/api/fotos/*",
                                 "/api/series/**",
                                 "/api/conteudos/**"
                         ).permitAll()

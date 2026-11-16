@@ -8,8 +8,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByEmail(String email);
+    Optional<Usuario> findByEmailIgnoreCase(String email);
 
     boolean existsByEmail(String email);
+    boolean existsByFotoChave(String fotoChave);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT u FROM Usuario u WHERE u.id = :id")

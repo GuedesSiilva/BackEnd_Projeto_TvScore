@@ -28,4 +28,8 @@ public class RecomendacaoController {
                 .cacheControl(CacheControl.noStore())
                 .body(recomendacaoService.buscarFilmes(authorization));
     }
+    @GetMapping("/series")
+    public ResponseEntity<RecomendacoesDTO> buscarSeries(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(recomendacaoService.buscarSeries(authorization));
+    }
 }

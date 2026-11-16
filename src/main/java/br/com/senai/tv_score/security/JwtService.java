@@ -46,10 +46,15 @@ public class JwtService {
     }
 
     public String gerarToken(Long usuarioId) {
+        return gerarToken(usuarioId, 0);
+    }
+
+    public String gerarToken(Long usuarioId, long versao) {
         Instant agora = Instant.now();
 
         return Jwts.builder()
                 .subject("usuario:" + java.util.Objects.requireNonNull(usuarioId))
+                .claim("cv", versao)
                 .issuedAt(Date.from(agora))
                 .expiration(
                         Date.from(agora.plusSeconds(expirationSeconds))
@@ -69,6 +74,16 @@ public class JwtService {
             return Optional.of(Long.parseLong(subject.substring(8)));
         } catch (JwtException | IllegalArgumentException ex) {
             return Optional.empty();
+        }
+    }
+
+    public boolean versaoValida(String token, long versao) {
+        try {
+            Object valor = parser.parseSignedClaims(token).getPayload().get("cv");
+            return valor == null ? versao == 0
+                    : valor instanceof Number n && n.longValue() == versao;
+        } catch (JwtException | IllegalArgumentException ex) {
+            return false;
         }
     }
 }

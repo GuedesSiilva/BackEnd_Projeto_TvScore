@@ -14,11 +14,14 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final br.com.senai.tv_score.usuarios.FotoService fotos;
 
-    public AuthService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
+                       br.com.senai.tv_score.usuarios.FotoService fotos) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.fotos = fotos;
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -29,9 +32,9 @@ public class AuthService {
         }
 
         Usuario usuario = usuarioOpt.get();
-        String token = jwtService.gerarToken(usuario.getId());
+        String token = jwtService.gerarToken(usuario.getId(), usuario.getVersaoCredenciais());
 
-        return new LoginResponse(token, usuario.getNome(), usuario.getEmail());
+        return new LoginResponse(token, usuario.getNome(), usuario.getEmail(), fotos.url(usuario.getFotoChave()));
     }
 
     public LoginResponse cadastrar(CadastroRequest request) {
@@ -50,6 +53,6 @@ public class AuthService {
         Usuario usuarioSalvo = usuarioRepository.save(novoUsuario);
         String token = jwtService.gerarToken(usuarioSalvo.getId());
 
-        return new LoginResponse(token, usuarioSalvo.getNome(), usuarioSalvo.getEmail());
+        return new LoginResponse(token, usuarioSalvo.getNome(), usuarioSalvo.getEmail(), fotos.url(usuarioSalvo.getFotoChave()));
     }
 }

@@ -29,6 +29,23 @@ public record AvaliacaoDTO(
         LocalDateTime dataCriacao,
 
         @NotNull(message = "O tipo do conteúdo é obrigatório")
-        TipoConteudo tipoConteudo
+        TipoConteudo tipoConteudo,
+        @com.fasterxml.jackson.annotation.JsonProperty(access=com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+        String fotoUsuarioUrl,
+        @com.fasterxml.jackson.annotation.JsonProperty(access=com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+        ConteudoResumoDTO conteudo,
+        @com.fasterxml.jackson.annotation.JsonProperty(access=com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+        String estadoConteudo
 ) {
+    public AvaliacaoDTO(Long id, Long filmeSerieId, Double nota, String comentario, String nomeUsuario,
+            LocalDateTime dataCriacao, TipoConteudo tipoConteudo) {
+        this(id,filmeSerieId,nota,comentario,nomeUsuario,dataCriacao,tipoConteudo,null,null,"NAO_SOLICITADO");
+    }
+    public AvaliacaoDTO(Long id, Long filmeSerieId, Double nota, String comentario, String nomeUsuario,
+            LocalDateTime dataCriacao, TipoConteudo tipoConteudo,String fotoUsuarioUrl,ConteudoResumoDTO conteudo) {
+        this(id,filmeSerieId,nota,comentario,nomeUsuario,dataCriacao,tipoConteudo,fotoUsuarioUrl,conteudo,"NAO_SOLICITADO");
+    }
+    public AvaliacaoDTO comConteudo(ConteudoResumoDTO resumo) {
+        return new AvaliacaoDTO(id,filmeSerieId,nota,comentario,nomeUsuario,dataCriacao,tipoConteudo,fotoUsuarioUrl,resumo,resumo==null?"INDISPONIVEL":"DISPONIVEL");
+    }
 }

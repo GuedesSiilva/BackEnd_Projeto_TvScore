@@ -19,19 +19,22 @@ public class UsuarioService {
     private final FavoritoRepository favoritoRepository;
     private final FilmePreferidoRepository filmePreferidoRepository;
     private final PasswordEncoder passwordEncoder;
+    private final FotoService fotos;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
             AvaliacaoRepository avaliacaoRepository,
             FavoritoRepository favoritoRepository,
             FilmePreferidoRepository filmePreferidoRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            FotoService fotos
     ) {
         this.usuarioRepository = usuarioRepository;
         this.avaliacaoRepository = avaliacaoRepository;
         this.favoritoRepository = favoritoRepository;
         this.filmePreferidoRepository = filmePreferidoRepository;
         this.passwordEncoder = passwordEncoder;
+        this.fotos = fotos;
     }
 
     @Transactional
@@ -49,7 +52,7 @@ public class UsuarioService {
 
         return new UsuarioLogadoResponse(
                 usuario.getNome(),
-                usuario.getEmail()
+                usuario.getEmail(), fotos.url(usuario.getFotoChave())
         );
     }
 
@@ -83,6 +86,7 @@ public class UsuarioService {
 
         // A coleção é gerenciada pelo JPA na tabela usuario_genero.
         usuario.getGenerosPreferidos().clear();
+        fotos.agendarExclusao(usuario.getFotoChave());
         usuarioRepository.flush();
 
         usuarioRepository.delete(usuario);

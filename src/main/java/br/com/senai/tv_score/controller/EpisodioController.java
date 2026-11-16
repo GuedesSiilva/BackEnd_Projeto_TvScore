@@ -61,9 +61,9 @@ public class EpisodioController {
     @GetMapping("/{serieId}/episodios/grade")
     public br.com.senai.tv_score.dto.GradeEpisodiosDTO grade(@PathVariable Long serieId,
             @RequestParam(defaultValue = "false") boolean incluirEspeciais) {
-        var painel = episodioService.buscarPainel(serieId, 10, 1, incluirEspeciais);
+        var temporadas = episodioService.carregarTemporadas(serieId, incluirEspeciais);
         return new br.com.senai.tv_score.dto.GradeEpisodiosDTO(serieId,
-            painel.temporadas().stream().flatMap(t -> t.episodes().stream())
+            temporadas.stream().flatMap(t -> t.episodes().stream())
             .map(e -> new br.com.senai.tv_score.dto.GradeEpisodiosDTO.Celula(
                 e.temporada(), e.numero(), e.nota(), e.quantidadeVotos(), e.dataExibicao())).toList());
     }
@@ -72,6 +72,6 @@ public class EpisodioController {
             @RequestParam(defaultValue = "10") int limite,
             @RequestParam(defaultValue = "1") int minimoVotos,
             @RequestParam(defaultValue = "false") boolean incluirEspeciais) {
-        return episodioService.buscarPainel(serieId, limite, minimoVotos, incluirEspeciais).topRated();
+        return episodioService.buscarRanking(serieId, limite, minimoVotos, incluirEspeciais);
     }
 }

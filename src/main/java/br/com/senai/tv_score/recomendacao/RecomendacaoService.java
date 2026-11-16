@@ -49,6 +49,15 @@ public class RecomendacaoService {
     }
 
     public RecomendacoesDTO buscarFilmes(String authorization) {
+        return consultar(authorization, endpoint);
+    }
+
+    public RecomendacoesDTO buscarSeries(String authorization) {
+        URI series = URI.create(endpoint.toString().replace("/recomendacoes/filmes/java", "/recomendacoes/series/java"));
+        return consultar(authorization, series);
+    }
+
+    private RecomendacoesDTO consultar(String authorization, URI destino) {
         if (authorization == null
                 || !authorization.regionMatches(
                 true, 0, "Bearer ", 0, 7
@@ -67,7 +76,7 @@ public class RecomendacaoService {
         try {
             ResponseEntity<RecomendacoesDTO> resposta =
                     cliente.exchange(
-                            endpoint,
+                            destino,
                             HttpMethod.GET,
                             new HttpEntity<Void>(headers),
                             RecomendacoesDTO.class

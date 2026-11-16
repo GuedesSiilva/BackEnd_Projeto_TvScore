@@ -16,9 +16,11 @@ import java.util.List;
 public class AvaliacaoService {
 
     private final AvaliacaoRepository avaliacaoRepository;
+    private final br.com.senai.tv_score.usuarios.FotoService fotos;
 
-    public AvaliacaoService(AvaliacaoRepository avaliacaoRepository) {
+    public AvaliacaoService(AvaliacaoRepository avaliacaoRepository, br.com.senai.tv_score.usuarios.FotoService fotos) {
         this.avaliacaoRepository = avaliacaoRepository;
+        this.fotos = fotos;
     }
 
     @Transactional(readOnly = true)
@@ -83,7 +85,7 @@ public class AvaliacaoService {
                 avaliacao.getComentario(),
                 avaliacao.getUsuario().getNome(),
                 avaliacao.getDataCriacao(),
-                avaliacao.getTipoConteudo()
+                avaliacao.getTipoConteudo(), fotos.url(avaliacao.getUsuario().getFotoChave()), null
         );
     }
 
@@ -158,7 +160,7 @@ public class AvaliacaoService {
     public org.springframework.data.domain.Page<AvaliacaoDTO> listarPorUsuario(Usuario usuario, int pagina, int tamanho) {
         if (pagina < 0 || tamanho < 1 || tamanho > 100) throw new IllegalArgumentException("P?gina inv?lida; tamanho entre 1 e 100.");
         return avaliacaoRepository.findByUsuario(usuario, org.springframework.data.domain.PageRequest.of(
-            pagina, tamanho, org.springframework.data.domain.Sort.by("id").ascending())).map(this::paraDTO);
+            pagina, tamanho, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Order.desc("dataCriacao"), org.springframework.data.domain.Sort.Order.desc("id")))).map(this::paraDTO);
     }
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<AvaliacaoDTO> listarPorFilme(Long id, TipoConteudo tipo, int pagina, int tamanho) {
@@ -166,6 +168,6 @@ public class AvaliacaoService {
         if (pagina < 0 || tamanho < 1 || tamanho > 100) throw new IllegalArgumentException("Pagina invalida.");
         return avaliacaoRepository.findByFilmeSerieIdAndTipoConteudo(id, tipo,
             org.springframework.data.domain.PageRequest.of(pagina, tamanho,
-                org.springframework.data.domain.Sort.by("id").ascending())).map(this::paraDTO);
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Order.desc("dataCriacao"), org.springframework.data.domain.Sort.Order.desc("id")))).map(this::paraDTO);
     }
 }

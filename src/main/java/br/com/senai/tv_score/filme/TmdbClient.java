@@ -11,6 +11,13 @@ import java.net.URI;
 
 @Component
 public class TmdbClient {
+    private CacheTmdb<URI, br.com.senai.tv_score.dto.DetalhesTmdbDTO> detalhes =
+            new CacheTmdb<>(java.time.Duration.ofMinutes(15), 512);
+    @org.springframework.beans.factory.annotation.Autowired
+    void configurarCache(@Value("${catalogo.resumo.ttl-segundos:900}") long ttl,
+                         @Value("${catalogo.resumo.capacidade:512}") int capacidade) {
+        detalhes = new CacheTmdb<>(java.time.Duration.ofSeconds(ttl), capacidade);
+    }
 
     private final RestTemplate restTemplate;
     private final String apiUrl;
@@ -40,6 +47,20 @@ public class TmdbClient {
     }
 
     public <T> T buscar(URI uri, Class<T> tipo) {
+        if (tipo == br.com.senai.tv_score.dto.DetalhesTmdbDTO.class) {
+            return tipo.cast(detalhes.buscar(uri, () -> {
+                var resposta = executar(uri, br.com.senai.tv_score.dto.DetalhesTmdbDTO.class);
+                if (uri.getQuery() != null && uri.getQuery().contains("append_to_response=")) {
+                    URI simples = UriComponentsBuilder.fromUri(uri).replaceQueryParam("append_to_response").build(true).toUri();
+                    detalhes.guardar(simples, resposta);
+                }
+                return resposta;
+            }));
+        }
+        return executar(uri, tipo);
+    }
+
+    private <T> T executar(URI uri, Class<T> tipo) {
         T resposta;
         try { resposta = restTemplate.getForObject(uri, tipo); }
         catch (org.springframework.web.client.RestClientResponseException ex) {

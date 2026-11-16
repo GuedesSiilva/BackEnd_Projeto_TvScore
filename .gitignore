@@ -60,3 +60,4 @@ application-local.yml
 *.pfx
 
 .maven-test-cache/
+fotos-dev/

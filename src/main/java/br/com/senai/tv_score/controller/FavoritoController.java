@@ -18,9 +18,11 @@ import java.util.List;
 public class FavoritoController {
 
     private final FavoritoService favoritoService;
+    private final br.com.senai.tv_score.filme.ResumoConteudoService resumos;
 
-    public FavoritoController(FavoritoService favoritoService) {
+    public FavoritoController(FavoritoService favoritoService, br.com.senai.tv_score.filme.ResumoConteudoService resumos) {
         this.favoritoService = favoritoService;
+        this.resumos = resumos;
     }
 
     @GetMapping
@@ -54,6 +56,6 @@ public class FavoritoController {
     @GetMapping("/paginados")
     public org.springframework.data.domain.Page<FavoritoDTO> paginados(@AuthenticationPrincipal Usuario usuario,
             @RequestParam(defaultValue = "0") int pagina, @RequestParam(defaultValue = "20") int tamanho) {
-        return favoritoService.listarFavoritos(usuario, pagina, tamanho);
+        return resumos.favoritos(favoritoService.listarFavoritos(usuario, pagina, tamanho));
     }
 }

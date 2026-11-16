@@ -8,6 +8,13 @@ import org.springframework.mock.web.*;
 import org.springframework.security.core.context.SecurityContextHolder;
 class JwtServiceTest {
     private final JwtService jwt = new JwtService("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", 2592000);
+    @Test void claimAusenteSomenteEnquantoVersaoPersistidaZero() {
+        String legado=io.jsonwebtoken.Jwts.builder().subject("usuario:12")
+            .expiration(new Date(System.currentTimeMillis()+100000))
+            .signWith(io.jsonwebtoken.security.Keys.hmacShaKeyFor(new byte[32])).compact();
+        assertEquals(12L,jwt.extrairUsuarioIdSeValido(legado).orElseThrow());
+        assertTrue(jwt.versaoValida(legado,0));assertFalse(jwt.versaoValida(legado,1));
+    }
     @Test void identidadeImutavelERejeicaoDeEmail() {
         assertEquals(12L, jwt.extrairUsuarioIdSeValido(jwt.gerarToken(12L)).orElseThrow());
         String antigo = io.jsonwebtoken.Jwts.builder().subject("a@example.com")

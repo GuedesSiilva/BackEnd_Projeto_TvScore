@@ -7,6 +7,7 @@ import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 
 
 @SpringBootApplication
+@org.springframework.scheduling.annotation.EnableScheduling
 public class TvScoreApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(TvScoreApplication.class, args);

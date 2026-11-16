@@ -81,6 +81,7 @@ class FilmesPreferidosControllerTest {
         usuario = new Usuario();
         usuario.setId(7L);
         when(jwt.extrairUsuarioIdSeValido("teste")).thenReturn(Optional.of(7L));
+        when(jwt.versaoValida("teste", 0)).thenReturn(true);
         when(usuarios.findById(7L)).thenReturn(Optional.of(usuario));
     }
 

@@ -28,7 +28,6 @@ public class PreferenciasUsuarioService {
         this.transacao = new org.springframework.transaction.support.TransactionTemplate(manager);
     }
 
-    @Transactional(readOnly = true)
     public PreferenciasGenerosResponseDTO consultar(
             Usuario usuarioAutenticado
     ) {
@@ -37,10 +36,11 @@ public class PreferenciasUsuarioService {
         List<GeneroConteudoDTO> catalogo =
                 generoService.listarGenerosDisponiveis().stream().map(g -> new GeneroConteudoDTO(g.codigo(), g.nome())).toList();
 
-        Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(this::usuarioNaoEncontrado);
-
-        return paraDTO(usuario, catalogo);
+        return transacao.execute(status -> {
+            Usuario usuario = usuarioRepository.findById(usuarioId)
+                    .orElseThrow(this::usuarioNaoEncontrado);
+            return paraDTO(usuario, catalogo);
+        });
     }
 
     public PreferenciasGenerosResponseDTO salvar(

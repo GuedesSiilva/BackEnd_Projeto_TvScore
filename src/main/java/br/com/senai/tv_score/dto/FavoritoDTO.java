@@ -15,5 +15,14 @@ public record FavoritoDTO(
         LocalDateTime dataAdicionado,
 
         @NotNull(message = "O tipo do conteúdo é obrigatório")
-        TipoConteudo tipoConteudo
-) {}
+        TipoConteudo tipoConteudo,
+        @com.fasterxml.jackson.annotation.JsonProperty(access=com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+        ConteudoResumoDTO conteudo,
+        @com.fasterxml.jackson.annotation.JsonProperty(access=com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+        String estadoConteudo
+) {
+    public FavoritoDTO(Long id,Long filmeSerieId,LocalDateTime dataAdicionado,TipoConteudo tipoConteudo) {
+        this(id,filmeSerieId,dataAdicionado,tipoConteudo,null,"NAO_SOLICITADO");
+    }
+    public FavoritoDTO comConteudo(ConteudoResumoDTO resumo) { return new FavoritoDTO(id,filmeSerieId,dataAdicionado,tipoConteudo,resumo,resumo==null?"INDISPONIVEL":"DISPONIVEL"); }
+}

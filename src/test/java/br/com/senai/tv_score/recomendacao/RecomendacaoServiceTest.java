@@ -7,6 +7,12 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 import static org.junit.jupiter.api.Assertions.*;
 class RecomendacaoServiceTest {
+ @Test void seriesUsaRotaPropriaEPreservaToken() {
+    var http=new RestTemplate();var server=MockRestServiceServer.bindTo(http).build();
+    server.expect(requestTo("http://localhost/recomendacoes/series/java")).andExpect(header("Authorization","Bearer conta-b"))
+      .andRespond(withSuccess("{\"total\":0,\"recomendacoes\":[]}",MediaType.APPLICATION_JSON));
+    assertTrue(new RecomendacaoService("http://localhost",http).buscarSeries("Bearer conta-b").recomendacoes().isEmpty());server.verify();
+ }
  @Test void encaminhaBearerEPreservaContrato() {
     var http = new RestTemplate();
     var server = MockRestServiceServer.bindTo(http).build();

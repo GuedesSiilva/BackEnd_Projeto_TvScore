@@ -20,7 +20,7 @@ import static org.mockito.Mockito.when;
 class AvaliacaoServiceTest {
 
     private final AvaliacaoRepository repositorio = mock(AvaliacaoRepository.class);
-    private final AvaliacaoService service = new AvaliacaoService(repositorio);
+    private final AvaliacaoService service = new AvaliacaoService(repositorio, org.mockito.Mockito.mock(br.com.senai.tv_score.usuarios.FotoService.class));
     private final Usuario usuario = usuario(1L);
 
     @Test

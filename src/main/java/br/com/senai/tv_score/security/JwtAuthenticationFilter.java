@@ -39,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             jwtService.extrairUsuarioIdSeValido(authHeader.substring(7))
                     .flatMap(usuarioRepository::findById)
+                    .filter(usuario -> jwtService.versaoValida(authHeader.substring(7), usuario.getVersaoCredenciais()))
                     .ifPresent(usuario -> {
                         var autenticacao = new UsernamePasswordAuthenticationToken(
                                 usuario, null, Collections.emptyList()

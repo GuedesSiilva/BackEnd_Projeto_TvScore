@@ -66,7 +66,7 @@ Configure as variáveis de ambiente no terminal ou em **Run → Edit Configurati
 | `JWT_SECRET` | Segredo em Base64 gerado a partir de pelo menos 32 bytes aleatórios. |
 | `JWT_EXPIRATION_SECONDS` | Validade positiva do token em segundos, por exemplo `2592000` para 30 dias. |
 
-Use um banco de desenvolvimento para executar localmente e testar. A configuração atual usa `spring.jpa.hibernate.ddl-auto=update`, que permite ao Hibernate atualizar o esquema ao iniciar. Mantenha credenciais fora do Git.
+Use um banco de desenvolvimento migrado para executar a aplicação localmente. A configuração usa `spring.jpa.hibernate.ddl-auto=validate`: prepare e confira as migrations antes de iniciar. Os testes rápidos usam H2 isolado; MySQL real exige opt-in em banco descartável. Mantenha credenciais fora do Git.
 
 ```powershell
 # Windows
@@ -96,7 +96,7 @@ docker run --rm -p 8080:8080 --env-file .env tvscore-backend
 | Área | Método e rota | Uso |
 |---|---|---|
 | Autenticação | `POST /api/auth/cadastrar` | Cadastro com `nome`, `email` e `senha`. |
-| Autenticação | `POST /api/auth/login` | Login com `email` e `senha`; retorna `token`, `nome` e `email`. |
+| Autenticação | `POST /api/auth/login` | Login com `email` e `senha`; retorna `token`, `nome`, `email` e `fotoUrl` nullable. |
 | Perfil | `GET /api/usuarios/eu`, `PUT /api/usuarios/eu` | Consultar perfil ou atualizar `nome`. |
 | Preferências | `GET /api/usuarios/eu/generos`, `PUT /api/usuarios/eu/generos` | Consultar ou salvar códigos de gêneros preferidos. |
 | Opções de filmes preferidos | `GET /api/usuarios/eu/filmes-preferidos/opcoes?pagina=1` | Filmes do TMDB relacionados aos gêneros escolhidos, para montar a segunda etapa. |
@@ -161,7 +161,7 @@ O `PUT` substitui toda a seleção, remove IDs repetidos e retorna `200` com `{"
 
 Cada filme retornado contém `filmeId`, `titulo`, `sinopse`, `generos` (ID e nome), `idiomaOriginal`, `dataLancamento`, `notaTmdb`, `popularidade`, `posterPath` e `selecionadoEm`. Os metadados vêm dos detalhes do TMDB, e não do aplicativo. `notaTmdb` é a média do catálogo, não uma avaliação dada pelo usuário. Campos opcionais podem ser nulos ou vazios se o catálogo não os informar.
 
-A seleção é independente de `/api/favoritos` e de `/api/avaliacoes`. Os filmes e seus gêneros são persistidos nas tabelas `usuario_filme_preferido` e `usuario_filme_preferido_genero`; com a configuração atual `ddl-auto=update`, o Hibernate cria as novas tabelas ao iniciar. Excluir a conta remove também essa seleção.
+A seleção é independente de `/api/favoritos` e de `/api/avaliacoes`. Os títulos e seus gêneros são persistidos nas tabelas `usuario_filme_preferido` e `usuario_filme_preferido_genero`; revisar a migração manual existente e [MIGRACOES_MYSQL.md](docs/MIGRACOES_MYSQL.md) antes de iniciar. Excluir a conta remove também essa seleção.
 
 Sem token, a rota retorna `401`; lista ausente, IDs inválidos ou mais de cinco itens retornam `400`. Se qualquer filme não existir no TMDB, retorna `404`; falhas do catálogo preservam toda a seleção anterior. Alterações simultâneas do mesmo usuário são serializadas, e repetir a seleção não cria registros duplicados nem altera a data de escolha dos filmes mantidos.
 
@@ -193,7 +193,7 @@ src/main/
 .\mvnw.cmd clean package
 ```
 
-Em Linux ou macOS, substitua `.\mvnw.cmd` por `./mvnw`. O teste de carregamento do contexto usa a configuração da aplicação; execute-o com as variáveis preenchidas e um banco de teste acessível.
+Em Linux ou macOS, substitua `.\mvnw.cmd` por `./mvnw`. A suíte rápida, inclusive o teste de contexto, usa `src/test/resources/application.properties` com H2 e provedores isolados. Não precisa de banco/SMTP/storage de produção. A validação MySQL real é opt-in separado, conforme a documentação de migrações.
 
 ## Créditos de dados
 
@@ -206,3 +206,17 @@ Metadados de filmes, séries e episódios: [The Movie Database (TMDB)](https://w
 ## Revisao de novembro de 2026
 
 Contratos adicionais, transicao JWT, testes isolados e plano de persistencia: [documentacao da implementacao](docs/IMPLEMENTACAO_2026-11-12.md).
+
+## Implementação local — 16/11/2026
+
+Contratos e limites desta evolução estão em [ALTERACOES_FLUTTER.md](docs/ALTERACOES_FLUTTER.md),
+[CONFIGURACAO_PRODUCAO.md](docs/CONFIGURACAO_PRODUCAO.md), [MIGRACOES_MYSQL.md](docs/MIGRACOES_MYSQL.md)
+e [VALIDACAO_TVSCORE.md](docs/VALIDACAO_TVSCORE.md). A matriz diferencia implementação, testes locais e ativação externa.
+O OpenAPI gerado continua em `/v3/api-docs` e `/swagger-ui/index.html`, com DTOs e descrições das novas rotas.
+
+Rotas adicionadas: `PUT /api/usuarios/eu/senha`, `POST /api/auth/senha/recuperacao`,
+`POST /api/auth/senha/redefinicao`, `PUT|DELETE /api/usuarios/eu/foto`,
+`GET /api/conteudos/pesquisa`, `GET /api/conteudos/por-genero/ordenados` e
+`GET /api/recomendacoes/series`. `GET /api/fotos/{chave}` existe apenas no storage local de desenvolvimento.
+Rotas legadas e listas completas do Python continuam disponíveis. O padrão de schema passou a `validate`:
+prepare as migrations antes de iniciar sobre um banco existente; não há atualização automática do schema.

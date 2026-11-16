@@ -30,6 +30,10 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErroResponse> tamanhoFoto(Exception ex) {
+        return erro(HttpStatus.PAYLOAD_TOO_LARGE, "Foto excede o tamanho permitido.");
+    }
 
     private static final Logger log =
             LoggerFactory.getLogger(GlobalExceptionHandler.class);

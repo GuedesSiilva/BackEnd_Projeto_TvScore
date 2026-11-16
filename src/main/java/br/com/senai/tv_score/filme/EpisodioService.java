@@ -18,7 +18,14 @@ import java.util.Objects;
 
 @Service
 public class EpisodioService {
-    private final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(4);
+    private final java.util.concurrent.ExecutorService executor = new java.util.concurrent.ThreadPoolExecutor(4, 4, 0,
+            java.util.concurrent.TimeUnit.SECONDS, new java.util.concurrent.ArrayBlockingQueue<>(16),
+            new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
+    private final java.util.concurrent.Semaphore operacoes = new java.util.concurrent.Semaphore(4);
+    @org.springframework.beans.factory.annotation.Value("${episodios.prazo-ms:20000}")
+    private long prazoMs = 20000;
+    @org.springframework.beans.factory.annotation.Value("${episodios.max-temporadas:100}")
+    private int maxTemporadas = 100;
     @jakarta.annotation.PreDestroy
     void encerrar() { executor.shutdownNow(); }
 
@@ -89,6 +96,11 @@ public class EpisodioService {
             );
         }
 
+        var temporadaEmCache = cacheTemporadas.valorValido(new ChaveTemporada(serieId, temporada));
+        if (temporadaEmCache != null) {
+            var encontrado = temporadaEmCache.episodes().stream().filter(e -> java.util.Objects.equals(e.numero(), episodio)).findFirst();
+            if (encontrado.isPresent()) return encontrado.get();
+        }
         return consultar(
                 "/tv/" + serieId
                         + "/season/" + temporada
@@ -117,7 +129,22 @@ public class EpisodioService {
             );
         }
 
-        TemporadasSerieDTO serie = cacheSeries.buscar(serieId, () -> {
+        List<TemporadaDTO> temporadas = carregarTemporadas(serieId, incluirEspeciais);
+        List<EpisodioDTO> topRated = projetarRanking(temporadas, limite, minimoVotos);
+        return new PainelEpisodiosDTO(
+                serieId,
+                "TMDB",
+                List.copyOf(temporadas),
+                topRated
+        );
+    }
+
+    public List<TemporadaDTO> carregarTemporadas(Long serieId, boolean incluirEspeciais) {
+        validarSerie(serieId);
+        if (!operacoes.tryAcquire()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Painel ocupado.");
+        long prazo = System.nanoTime() + java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(prazoMs);
+        try {
+        TemporadasSerieDTO serie = aguardar(executor.submit(() -> cacheSeries.buscar(serieId, () -> {
             TemporadasSerieDTO resposta = consultar("/tv/" + serieId, TemporadasSerieDTO.class);
             if (resposta.seasons() == null) {
                 throw new ResponseStatusException(
@@ -125,7 +152,7 @@ public class EpisodioService {
                 );
             }
             return resposta;
-        });
+        })), prazo);
 
         List<Integer> numeros = serie.seasons().stream()
                 .filter(Objects::nonNull)
@@ -139,20 +166,36 @@ public class EpisodioService {
 
         List<TemporadaDTO> temporadas = new ArrayList<>();
 
-        // Lotes limitam tamb?m a fila de consultas.
-        for (int inicio = 0; inicio < numeros.size(); inicio += 4) {
-            var tarefas = numeros.subList(inicio, Math.min(inicio + 4, numeros.size())).stream()
-                .map(numero -> java.util.concurrent.CompletableFuture.supplyAsync(
-                    () -> buscarTemporada(serieId, numero), executor)).toList();
-            for (var tarefa : tarefas) {
-                try { temporadas.add(tarefa.join()); }
-                catch (java.util.concurrent.CompletionException ex) {
-                    if (ex.getCause() instanceof RuntimeException causa) throw causa;
-                    throw ex;
-                }
+        if (numeros.size() > maxTemporadas) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Orçamento de temporadas excedido.");
+        List<java.util.concurrent.Future<TemporadaDTO>> pendentes = new ArrayList<>();
+        try {
+            for (int inicio = 0; inicio < numeros.size(); inicio += 4) {
+                if (System.nanoTime() >= prazo) throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Prazo dos episódios excedido.");
+                pendentes.clear();
+                for (int numero : numeros.subList(inicio, Math.min(inicio + 4, numeros.size())))
+                    pendentes.add(executor.submit(() -> buscarTemporada(serieId, numero)));
+                for (var tarefa : pendentes) temporadas.add(aguardar(tarefa, prazo));
             }
-        }
-
+            return List.copyOf(temporadas);
+        } finally { pendentes.forEach(t -> t.cancel(true)); }
+        } catch (java.util.concurrent.RejectedExecutionException ex) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Painel ocupado.");
+        } finally { operacoes.release(); }
+    }
+    private <T> T aguardar(java.util.concurrent.Future<T> tarefa, long prazo) {
+        try { return tarefa.get(Math.max(1, prazo - System.nanoTime()), java.util.concurrent.TimeUnit.NANOSECONDS); }
+        catch (java.util.concurrent.TimeoutException ex) { throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Prazo dos episódios excedido."); }
+        catch (InterruptedException ex) { Thread.currentThread().interrupt(); throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Consulta cancelada."); }
+        catch (java.util.concurrent.ExecutionException ex) {
+            if (ex.getCause() instanceof RuntimeException causa) throw causa;
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Falha ao carregar episódios.");
+        } finally { if (!tarefa.isDone()) tarefa.cancel(true); }
+    }
+    public List<EpisodioDTO> buscarRanking(Long serieId, int limite, int minimoVotos, boolean especiais) {
+        if (limite < 1 || limite > 50 || minimoVotos < 1) throw new IllegalArgumentException("Limite ou mínimo de votos inválido.");
+        return projetarRanking(carregarTemporadas(serieId, especiais), limite, minimoVotos);
+    }
+    private List<EpisodioDTO> projetarRanking(List<TemporadaDTO> temporadas, int limite, int minimoVotos) {
         LocalDate hoje = LocalDate.now(ZoneOffset.UTC);
 
         List<EpisodioDTO> topRated = temporadas.stream()
@@ -191,12 +234,7 @@ public class EpisodioService {
                 .limit(limite)
                 .toList();
 
-        return new PainelEpisodiosDTO(
-                serieId,
-                "TMDB",
-                List.copyOf(temporadas),
-                topRated
-        );
+        return topRated;
     }
 
     private <T> T consultar(String caminho, Class<T> tipo) {

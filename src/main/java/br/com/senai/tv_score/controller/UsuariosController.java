@@ -15,9 +15,11 @@ import org.springframework.web.bind.annotation.*;
 public class UsuariosController {
 
     private final UsuarioService usuarioService;
+    private final br.com.senai.tv_score.usuarios.FotoService fotos;
 
-    public UsuariosController(UsuarioService usuarioService) {
+    public UsuariosController(UsuarioService usuarioService, br.com.senai.tv_score.usuarios.FotoService fotos) {
         this.usuarioService = usuarioService;
+        this.fotos = fotos;
     }
 
     @GetMapping("/eu")
@@ -26,7 +28,7 @@ public class UsuariosController {
     ) {
         return new UsuarioLogadoResponse(
                 usuario.getNome(),
-                usuario.getEmail()
+                usuario.getEmail(), fotos.url(usuario.getFotoChave())
         );
     }
 

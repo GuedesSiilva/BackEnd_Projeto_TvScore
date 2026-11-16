@@ -22,9 +22,11 @@ import java.util.List;
 public class AvaliacaoController {
 
     private final AvaliacaoService avaliacaoService;
+    private final br.com.senai.tv_score.filme.ResumoConteudoService resumos;
 
-    public AvaliacaoController(AvaliacaoService avaliacaoService) {
+    public AvaliacaoController(AvaliacaoService avaliacaoService, br.com.senai.tv_score.filme.ResumoConteudoService resumos) {
         this.avaliacaoService = avaliacaoService;
+        this.resumos = resumos;
     }
 
     @GetMapping("/filme/{filmeSerieId}")
@@ -88,12 +90,12 @@ public class AvaliacaoController {
     @GetMapping("/minhas/paginadas")
     public org.springframework.data.domain.Page<AvaliacaoDTO> paginados(@AuthenticationPrincipal Usuario usuario,
             @RequestParam(defaultValue = "0") int pagina, @RequestParam(defaultValue = "20") int tamanho) {
-        return avaliacaoService.listarPorUsuario(usuario, pagina, tamanho);
+        return resumos.avaliacoes(avaliacaoService.listarPorUsuario(usuario, pagina, tamanho));
     }
     @GetMapping("/filme/{filmeSerieId}/paginadas")
     public org.springframework.data.domain.Page<AvaliacaoDTO> porConteudoPaginado(@PathVariable Long filmeSerieId,
         @RequestParam TipoConteudo tipoConteudo, @RequestParam(defaultValue = "0") int pagina,
         @RequestParam(defaultValue = "20") int tamanho) {
-        return avaliacaoService.listarPorFilme(filmeSerieId, tipoConteudo, pagina, tamanho);
+        return resumos.avaliacoes(avaliacaoService.listarPorFilme(filmeSerieId, tipoConteudo, pagina, tamanho));
     }
 }
