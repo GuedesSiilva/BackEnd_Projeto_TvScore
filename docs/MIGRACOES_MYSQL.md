@@ -1,5 +1,11 @@
 # Migrations MySQL manuais
 
+> **Revisão atual:** veja [MIGRACAO_CONTA_FOTO_RESET.md](MIGRACAO_CONTA_FOTO_RESET.md).
+> Os scripts canônicos agora acompanham o artefato em `src/main/resources/db/`.
+> Esse guia cobre o erro `missing table [foto_limpeza]`, migração parcial, todas as colunas/entidades novas,
+> ordem atual de aplicação e estratégia de baseline. A sequência abaixo registra a entrega anterior;
+> não executar as cópias de docs e classpath duas vezes.
+
 Não houve conexão ao Aiven, aplicação de SQL ou validação em MySQL real nesta tarefa. Docker não foi encontrado no PATH. H2 não certifica MySQL. Não foi ativado Flyway/baseline automático; o projeto possuía somente SQL manual. Scripts novos seguem a mesma estratégia e devem ser revisados em cópia descartável antes de qualquer implantação.
 
 ## Sequência

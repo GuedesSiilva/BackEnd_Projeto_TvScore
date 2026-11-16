@@ -209,6 +209,11 @@ Contratos adicionais, transicao JWT, testes isolados e plano de persistencia: [d
 
 ## Implementação local — 16/11/2026
 
+Se ocorrer `Schema validation: missing table [foto_limpeza]`, seguir o
+[guia da migração completa de conta/foto/reset](docs/MIGRACAO_CONTA_FOTO_RESET.md).
+Os scripts estão em `src/main/resources/db/`, cobrem também reset de senha e colunas de usuário,
+e exigem preflight antes da aplicação manual. Flyway permanece explicitamente desabilitado.
+
 Contratos e limites desta evolução estão em [ALTERACOES_FLUTTER.md](docs/ALTERACOES_FLUTTER.md),
 [CONFIGURACAO_PRODUCAO.md](docs/CONFIGURACAO_PRODUCAO.md), [MIGRACOES_MYSQL.md](docs/MIGRACOES_MYSQL.md)
 e [VALIDACAO_TVSCORE.md](docs/VALIDACAO_TVSCORE.md). A matriz diferencia implementação, testes locais e ativação externa.
