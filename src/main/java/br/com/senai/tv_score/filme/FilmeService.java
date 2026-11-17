@@ -332,7 +332,7 @@ public class FilmeService {
         UriComponentsBuilder builder = criarBuscaFilmes(pagina)
                 .queryParam("vote_average.gte", minima)
                 .queryParam("vote_average.lte", maxima)
-                .queryParam("vote_count.gte", 100)
+                .queryParam("vote_count.gte", 1000)
                 .queryParam("sort_by", "vote_average.desc");
 
         return executarBusca(builder);
@@ -358,7 +358,7 @@ public TmdbResponseDTO buscarSeriesPorNota(
             .queryParam("page", pagina)
             .queryParam("vote_average.gte", minima)
             .queryParam("vote_average.lte", maxima)
-            .queryParam("vote_count.gte", 100)
+            .queryParam("vote_count.gte", 1000)
             .queryParam("sort_by", "vote_average.desc");
 
     return consultarLista(builder, TipoConteudo.TV);
