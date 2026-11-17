@@ -338,6 +338,33 @@ public class FilmeService {
         return executarBusca(builder);
     }
 
+
+public TmdbResponseDTO buscarSeriesPorNota(
+        double minima,
+        double maxima,
+        int pagina
+) {
+    if (!Double.isFinite(minima) || !Double.isFinite(maxima)
+            || minima < 0 || maxima > 10 || minima > maxima) {
+        throw new IllegalArgumentException(
+                "Informe notas entre 0 e 10, com mínima menor ou igual à máxima."
+        );
+    }
+
+    validarPagina(pagina);
+
+    UriComponentsBuilder builder = tmdb.consulta("/discover/tv")
+            .queryParam("include_adult", false)
+            .queryParam("page", pagina)
+            .queryParam("vote_average.gte", minima)
+            .queryParam("vote_average.lte", maxima)
+            .queryParam("vote_count.gte", 100)
+            .queryParam("sort_by", "vote_average.desc");
+
+    return consultarLista(builder, TipoConteudo.TV);
+}
+
+
     // Busca pelo ano do lançamento principal do filme.
     public TmdbResponseDTO buscarFilmesPorAno(
             int ano,

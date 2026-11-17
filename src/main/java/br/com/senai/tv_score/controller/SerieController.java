@@ -26,6 +26,19 @@ public class SerieController {
         );
     }
 
+
+@GetMapping("/por-nota")
+public ResponseEntity<TmdbResponseDTO> buscarSeriesPorNota(
+        @RequestParam(name = "minima", defaultValue = "0") double minima,
+        @RequestParam(name = "maxima", defaultValue = "10") double maxima,
+        @RequestParam(name = "pagina", defaultValue = "1") int pagina
+) {
+    return ResponseEntity.ok(
+            filmeService.buscarSeriesPorNota(minima, maxima, pagina)
+    );
+}
+
+
     @GetMapping("/{id}")
     public ResponseEntity<FilmeDTO> buscarDetalhes(
             @PathVariable("id") Long id
