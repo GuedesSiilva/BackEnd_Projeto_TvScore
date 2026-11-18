@@ -14,9 +14,11 @@ import java.security.*;
 import java.time.Instant;
 import java.util.*;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 
 @Service
 public class RecuperacaoService {
+    private static final Pattern SOMENTE_ESPACOS = Pattern.compile("\\p{IsWhite_Space}*");
     private final UsuarioRepository usuarios;
     private final ResetSenhaRepository tokens;
     private final PasswordEncoder encoder;
@@ -59,7 +61,17 @@ public class RecuperacaoService {
     }
     public void redefinir(String token, String novaSenha, String ip) {
         limite.verificar("reset-ip:" + hash(ip));
-        PoliticaSenha.validar(novaSenha);
+        if (novaSenha == null || SOMENTE_ESPACOS.matcher(novaSenha).matches() || novaSenha.codePointCount(0, novaSenha.length()) < 6) {
+            throw new IllegalArgumentException("A senha deve ter pelo menos 6 caracteres e não pode conter apenas espaços.");
+        }
+        // Dígitos, # e * só são emojis quando fazem parte de uma sequência de tecla.
+        if (novaSenha.codePoints().anyMatch(c -> c == 0x20E3 || c == 0xFE0F
+                || (c > 127 && Character.isEmoji(c)))) {
+            throw new IllegalArgumentException("Emojis não são permitidos na senha.");
+        }
+        if (novaSenha.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalArgumentException("A senha está muito longa. Escolha uma senha mais curta.");
+        }
         if (token == null || !token.matches("[A-Za-z0-9_-]{43}")) throw invalido();
         tx.executeWithoutResult(status -> {
             String hashToken = hash(token);

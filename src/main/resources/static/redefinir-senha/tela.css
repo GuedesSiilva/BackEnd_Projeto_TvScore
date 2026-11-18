@@ -11,43 +11,75 @@
 * { box-sizing: border-box; }
 
 body {
-  min-height: 100vh;
   margin: 0;
+  min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 24px 16px;
-  background: radial-gradient(ellipse at top, #142b50, transparent 58%), var(--fundo);
+  background: radial-gradient(ellipse at 10% 0%, #162c50, transparent 55%), var(--fundo);
   color: var(--texto);
 }
 
+.pagina { width: min(100%, 500px); }
+
 .painel {
-  width: min(100%, 460px);
-  padding: clamp(24px, 6vw, 40px);
   border: 1px solid #ffffff26;
   border-radius: 24px;
+  overflow: hidden;
   background: #0d172b;
-  box-shadow: 0 24px 64px #0006;
+  box-shadow: 0 24px 64px #0007;
 }
 
-.marca { margin: 0 0 24px; font-size: 24px; font-weight: 800; letter-spacing: -1px; }
-.marca span { color: var(--dourado); margin-right: 6px; }
-.marca b { font-weight: 500; }
-h1 { margin: 0; font-size: clamp(28px, 7vw, 38px); letter-spacing: -.04em; }
-.descricao, .ajuda { color: var(--suave); }
-.descricao { margin: 8px 0 24px; }
-.ajuda { margin: 8px 0 18px; font-size: .875rem; }
-label { display: block; margin-bottom: 8px; font-weight: 600; }
+.conteudo { padding: clamp(24px, 6vw, 36px); }
 
-input, button {
+.capa {
+  display: grid;
+  place-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid #ffffff26;
+  background:
+    radial-gradient(ellipse at top, #243e66, transparent 80%), #111e34;
+}
+
+.marca { display: block; width: min(78px, 100%); height: auto; }
+
+h1 { margin: 0; font-size: clamp(28px, 5vw, 39px); letter-spacing: -.04em; }
+.descricao, .ajuda { color: var(--suave); }
+.descricao { margin: 8px 0 24px; line-height: 1.55; }
+.ajuda { margin: 8px 0 18px; font-size: .875rem; line-height: 1.5; }
+label { display: block; margin-bottom: 8px; font-weight: 650; }
+
+input:not([type=checkbox]), button {
   width: 100%;
   min-height: 48px;
-  border-radius: 12px;
+  border-radius: 10px;
   font: inherit;
 }
 
-input { background: var(--fundo); color: var(--texto); border: 1px solid #51617d; padding: 10px 12px; }
-button { margin-top: 20px; padding: 12px; border: 0; background: var(--azul); color: var(--fundo); font-weight: 750; cursor: pointer; }
+input:not([type=checkbox]) {
+  background: var(--fundo);
+  color: var(--texto);
+  border: 1px solid #51617d;
+  padding: 10px 12px;
+}
+
+.visibilidade {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  min-height: 44px;
+  color: var(--suave);
+  cursor: pointer;
+  font-size: .9rem;
+}
+
+.visibilidade input { width: 18px; height: 18px; accent-color: var(--azul); }
+button { margin-top: 12px; padding: 12px; border: 0; background: var(--azul); color: var(--fundo); font-weight: 750; cursor: pointer; }
+button:hover:not(:disabled) { background: #75a7ff; }
 button:disabled { opacity: .65; cursor: wait; }
 :focus-visible { outline: 2px solid var(--dourado); outline-offset: 4px; }
-#mensagem { margin: 16px 0 0; line-height: 1.5; }
+#mensagem:not(:empty) { margin: 16px 0 0; padding: 12px; border: 1px solid #51617d; border-radius: 10px; line-height: 1.5; }
 #mensagem:empty { margin: 0; }
+#mensagem[data-estado="sucesso"] { border-color: #76d6ad; color: #b0eed4; }
+#mensagem[data-estado="erro"] { border-color: #f3a991; color: #ffcebd; }

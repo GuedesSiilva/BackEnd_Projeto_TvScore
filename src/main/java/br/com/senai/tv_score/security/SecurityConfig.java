@@ -53,7 +53,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/redefinir-senha",
                                 "/redefinir-senha/tela.css",
-                                "/redefinir-senha/tela.js"
+                                "/redefinir-senha/tela.js",
+                                "/redefinir-senha/logo-tvscore.png"
                         ).permitAll()
                         .requestMatchers(
                                 HttpMethod.GET,

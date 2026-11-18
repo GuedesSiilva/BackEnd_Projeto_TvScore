@@ -10,6 +10,7 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.util.HtmlUtils;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
@@ -26,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class EmailRecuperacao {
     private static final Logger LOG = LoggerFactory.getLogger(EmailRecuperacao.class);
-    private record Mensagem(String from, List<String> to, String subject, String text) {
+    private record Mensagem(String from, List<String> to, String subject, String text, String html) {
         // RestClient inclui o corpo em logs de depuração via toString().
         @Override public String toString() { return "Mensagem de recuperação"; }
     }
@@ -98,20 +99,41 @@ public class EmailRecuperacao {
         }
         // O token gerado já é Base64 URL-safe. O builder preserva o caminho codificado de RESET_URL.
         String link = UriComponentsBuilder.fromUri(base).queryParam("token", token).build(true).toUriString();
+        long minutos = Math.max(1, Math.ceilDiv(restante.toMillis(), 60_000));
+        String validade = minutos == 1 ? "1 minuto" : minutos + " minutos";
         String texto = """
-                Recebemos um pedido para redefinir sua senha no TV Score.
+                Recebemos uma solicitação para redefinir a senha da sua conta no TV Score.
 
-                Abra este link para escolher uma nova senha:
+                Para continuar, acesse o link abaixo:
                 %s
 
-                O link é de uso único e expira em cerca de %d minuto(s) ou menos.
-                Se você não fez esse pedido, ignore este e-mail.
-                """.formatted(link, Math.max(1, Math.ceilDiv(restante.toSeconds(), 60)));
+                O link é de uso único e expira em até %s.
+                Se você não solicitou a redefinição, ignore esta mensagem. Sua senha permanecerá a mesma.
+
+                Equipe TV Score
+                """.formatted(link, validade);
+        String logo = base.resolve("/redefinir-senha/logo-tvscore.png").toASCIIString();
+        String html = """
+                <div lang="pt-BR" style="background:#080f1e;color:#f4f5fb;padding:24px;font-family:Arial,sans-serif">
+                  <div style="max-width:520px;margin:0 auto;padding:24px;background:#0d172b;border:1px solid #34415a;border-radius:16px">
+                    <img src="%s" alt="TV Score" width="61" height="57" style="display:block;width:61px;max-width:100%%;height:auto;color:#eec15e">
+                    <h1 style="font-size:26px;margin:14px 0">Redefinição de senha</h1>
+                    <p>Recebemos uma solicitação para redefinir a senha da sua conta no TV Score.</p>
+                    <p style="margin:24px 0">
+                      <a href="%s" style="display:inline-block;padding:14px 20px;border-radius:8px;background:#4d8cff;color:#080f1e;font-weight:bold;text-decoration:none">Definir nova senha</a>
+                    </p>
+                    <p>O link é de uso único e expira em até %s.</p>
+                    <p style="color:#c2cbe0">Se você não solicitou a redefinição, ignore esta mensagem. Sua senha permanecerá a mesma.</p>
+                    <p style="color:#c2cbe0;margin-bottom:0">Equipe TV Score</p>
+                  </div>
+                </div>
+                """.formatted(HtmlUtils.htmlEscape(logo), HtmlUtils.htmlEscape(link), validade);
         try {
             var resposta = http.post().uri("/emails")
                     .headers(headers -> headers.setBearerAuth(apiKey))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new Mensagem(remetente, List.of(destinatario), "Redefina sua senha do TV Score", texto))
+                    .body(new Mensagem(remetente, List.of(destinatario),
+                            "Solicitação de redefinição de senha | TV Score", texto, html))
                     .retrieve()
                     .toBodilessEntity();
             if (resposta.getStatusCode().is2xxSuccessful()) return;

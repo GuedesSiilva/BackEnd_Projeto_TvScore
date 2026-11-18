@@ -18,7 +18,7 @@ public class PaginaRedefinirSenhaController {
                 .cacheControl(CacheControl.noStore())
                 .header("Referrer-Policy", "no-referrer")
                 .header("Content-Security-Policy",
-                        "default-src 'none'; script-src 'self'; style-src 'self'; "
+                        "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; "
                                 + "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
                 .body(new ClassPathResource("paginas/redefinir-senha.html"));
     }

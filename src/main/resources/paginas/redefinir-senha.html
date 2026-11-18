@@ -9,21 +9,28 @@
   <script src="/redefinir-senha/tela.js" defer></script>
 </head>
 <body>
-  <main class="painel">
-    <p class="marca"><span aria-hidden="true">★</span> TV<b>Score</b></p>
-    <h1>Redefinir senha</h1>
-    <p class="descricao">Escolha a nova senha da sua conta TV Score.</p>
-    <noscript>Ative o JavaScript no navegador para redefinir a senha.</noscript>
-    <form id="formulario" method="post" hidden>
-      <label for="nova-senha">Nova senha</label>
-      <input id="nova-senha" type="password" autocomplete="new-password"
-             aria-describedby="regra-senha" required>
-      <p id="regra-senha" class="ajuda">Use de 8 a 72 bytes. Acentos e emojis podem contar como mais de um byte.</p>
-      <label for="confirmacao">Confirme a nova senha</label>
-      <input id="confirmacao" type="password" autocomplete="new-password" required>
-      <button id="salvar" type="submit">Salvar nova senha</button>
-    </form>
-    <p id="mensagem" role="status" aria-live="polite"></p>
-  </main>
+  <div class="pagina">
+    <main class="painel" aria-labelledby="titulo">
+      <header class="capa">
+        <img class="marca" src="/redefinir-senha/logo-tvscore.png" alt="TV Score" width="198" height="186">
+      </header>
+      <section class="conteudo">
+        <h1 id="titulo">Redefinir senha</h1>
+        <p class="descricao">Escolha uma nova senha para voltar à sua conta.</p>
+        <noscript>Ative o JavaScript no navegador para redefinir a senha.</noscript>
+        <form id="formulario" method="post" hidden>
+          <label for="nova-senha">Nova senha</label>
+          <input id="nova-senha" type="password" autocomplete="new-password"
+                 aria-describedby="regra-senha" required>
+          <p id="regra-senha" class="ajuda">A senha deve ter pelo menos 6 caracteres. São permitidos letras, inclusive acentuadas, números e símbolos especiais. Emojis não são permitidos.</p>
+          <label for="confirmacao">Confirme a nova senha</label>
+          <input id="confirmacao" type="password" autocomplete="new-password" required>
+          <label class="visibilidade"><input id="mostrar-senhas" type="checkbox"> Mostrar senhas</label>
+          <button id="salvar" type="submit">Salvar nova senha</button>
+        </form>
+        <p id="mensagem" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+  </div>
 </body>
 </html>

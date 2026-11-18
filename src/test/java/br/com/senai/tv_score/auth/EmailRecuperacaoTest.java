@@ -8,12 +8,14 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import java.net.SocketTimeoutException;
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.stringContainsInOrder;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
@@ -28,15 +30,22 @@ class EmailRecuperacaoTest {
     @Test void enviaJsonAoResendComLinkDeUsoUnico() throws Exception {
         var builder = RestClient.builder().baseUrl(RESEND);
         var servidor = MockRestServiceServer.bindTo(builder).build();
+        String logo = URI.create(RESET).resolve("/redefinir-senha/logo-tvscore.png").toString();
+        String introducao = "Recebemos uma solicitação para redefinir a senha da sua conta no TV Score.";
+        String link = RESET + "?token=token-falso";
+        String validade = "O link é de uso único e expira em até 20 minutos.";
         servidor.expect(requestTo(RESEND + "/emails"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", "Bearer " + CHAVE_FICTICIA))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.from").value(DE))
                 .andExpect(jsonPath("$.to[0]").value(PARA))
-                .andExpect(jsonPath("$.subject").value("Redefina sua senha do TV Score"))
-                .andExpect(jsonPath("$.text", containsString(RESET + "?token=token-falso")))
-                .andExpect(jsonPath("$.text", containsString("uso único")))
+                .andExpect(jsonPath("$.subject").value("Solicitação de redefinição de senha | TV Score"))
+                .andExpect(jsonPath("$.text", stringContainsInOrder(introducao,
+                        "Para continuar, acesse o link abaixo:", link, validade)))
+                .andExpect(jsonPath("$.html", stringContainsInOrder("<img src=\"" + logo + "\"",
+                        ">Redefinição de senha</h1>", introducao, "href=\"" + link + "\"",
+                        ">Definir nova senha</a>", validade)))
                 .andRespond(withSuccess());
         var email = new EmailRecuperacao(RESET, DE, true, CHAVE_FICTICIA, builder.build());
         try {
@@ -85,6 +94,8 @@ class EmailRecuperacaoTest {
         var servidor = MockRestServiceServer.bindTo(builder).build();
         servidor.expect(requestTo(RESEND + "/emails"))
                 .andExpect(jsonPath("$.text", containsString("?token=valido")))
+                .andExpect(jsonPath("$.text", containsString("expira em até 1 minuto.")))
+                .andExpect(jsonPath("$.html", containsString("expira em até 1 minuto.")))
                 .andRespond(withSuccess());
         var http = builder.build();
         var ativo = new EmailRecuperacao(RESET, DE, true, CHAVE_FICTICIA, http);

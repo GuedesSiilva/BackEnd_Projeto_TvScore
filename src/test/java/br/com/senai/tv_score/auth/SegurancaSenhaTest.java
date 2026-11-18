@@ -11,10 +11,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.util.concurrent.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 @SpringBootTest
 class SegurancaSenhaTest {
     @Autowired UsuarioRepository usuarios;
@@ -52,6 +55,50 @@ class SegurancaSenhaTest {
         var captor=org.mockito.ArgumentCaptor.forClass(String.class);
         verify(email).enviar(eq(u.getEmail()),captor.capture(),any(Instant.class));
         return captor.getValue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"á#*12", "𐐀abcd", "\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"})
+    void resetRejeitaSenhaCurtaOuEmBranco(String senha) throws Exception {
+        verificarSenhaDeRedefinicao(senha, "A senha deve ter pelo menos 6 caracteres e não pode conter apenas espaços.");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ABC12😀", "ABC1#️⃣", "ABC12©️"})
+    void resetRejeitaEmojisSemConsumirToken(String senha) throws Exception {
+        verificarSenhaDeRedefinicao(senha, "Emojis não são permitidos na senha.");
+    }
+
+    @Test void resetRejeitaSenhaAcimaDoLimiteDoBcrypt() throws Exception {
+        verificarSenhaDeRedefinicao("á".repeat(36) + "a",
+                "A senha está muito longa. Escolha uma senha mais curta.");
+    }
+
+    @Test void resetAceitaSeisCaracteresComAcentoESimbolos() throws Exception {
+        verificarSenhaDeRedefinicao("𐐀á#*12", null);
+    }
+
+    @Test void resetAceitaSenhaNoLimiteDoBcrypt() throws Exception {
+        verificarSenhaDeRedefinicao("á".repeat(36), null);
+    }
+
+    private void verificarSenhaDeRedefinicao(String senha, String mensagemEsperada) throws Exception {
+        String identificador = java.util.UUID.randomUUID().toString();
+        String token = emitir(identificador);
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(contexto)
+                .addFilters(seguranca).build();
+        String corpo = "{\"token\":\"%s\",\"novaSenha\":\"%s\"}".formatted(token, senha);
+        var resposta = mvc.perform(post("/api/auth/senha/redefinicao")
+                .with(request -> { request.setRemoteAddr(identificador); return request; })
+                .contentType("application/json").content(corpo));
+        if (mensagemEsperada == null) {
+            resposta.andExpect(status().isNoContent());
+            var auth = new AuthService(usuarios, encoder, jwt, fotos);
+            assertNotNull(auth.login(new LoginRequest(u.getEmail(), senha)).token());
+        } else {
+            resposta.andExpect(status().isBadRequest()).andExpect(jsonPath("$.mensagem").value(mensagemEsperada));
+            assertNull(tokens.findByHash(RecuperacaoService.hash(token)).orElseThrow().getConsumidoEm());
+        }
     }
     @Test void resetGuardaSomenteHashEImpedeReplay() throws Exception {
         String token=emitir("127.1.0.1");
