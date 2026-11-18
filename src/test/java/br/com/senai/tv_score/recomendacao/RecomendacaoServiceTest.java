@@ -15,6 +15,25 @@ class RecomendacaoServiceTest {
     private static final String INTERNO = "teste-interno-nao-secreto-000000000000";
     private static final String ITEM = "{\"id\":1,\"titulo\":\"Filme\",\"nota\":8,\"generos\":[18],\"score_recomendacao\":80,\"similaridade_sinopse\":0.7}";
 
+    @Test void preservaAnoOpcionalNaRespostaDeFilmesESeries() throws Exception {
+        for (boolean serie : new boolean[]{false, true}) {
+            for (String campo : new String[]{",\"ano\":2024", ",\"ano\":null", ""}) {
+                var http = new RestTemplate(); var server = MockRestServiceServer.bindTo(http).build();
+                server.expect(anything()).andRespond(withSuccess(
+                        "{\"total\":1,\"recomendacoes\":[" + ITEM.replace("}", campo + "}") + "]}",
+                        MediaType.APPLICATION_JSON));
+                var service = new RecomendacaoService("http://localhost", http, INTERNO);
+                var resposta = serie ? service.buscarSeries("Bearer teste") : service.buscarFilmes("Bearer teste");
+                Integer esperado = campo.contains("2024") ? 2024 : null;
+                assertEquals(esperado, resposta.recomendacoes().getFirst().ano());
+                var mapper = tools.jackson.databind.json.JsonMapper.builder().build();
+                var json = mapper.readTree(mapper.writeValueAsString(resposta));
+                assertEquals(mapper.valueToTree(esperado), json.get("recomendacoes").get(0).get("ano"));
+                server.verify();
+            }
+        }
+    }
+
     @Test void encaminhaBearerECredencialInterna() {
         var http = new RestTemplate(); var server = MockRestServiceServer.bindTo(http).build();
         server.expect(requestTo("http://localhost/recomendacoes/filmes/java"))

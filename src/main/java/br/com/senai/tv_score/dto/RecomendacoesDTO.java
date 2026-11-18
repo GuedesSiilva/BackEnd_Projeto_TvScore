@@ -29,13 +29,14 @@ public record RecomendacoesDTO(
             @JsonProperty("score_recomendacao") Double scoreRecomendacao,
             @JsonProperty("motivo_recomendacao") String motivoRecomendacao,
             @JsonProperty("similaridade_sinopse") Double similaridadeSinopse,
-            TipoConteudo tipoConteudo
+            TipoConteudo tipoConteudo,
+            Integer ano
     ) {
         public Item(Long id, String titulo, String sinopse, Double nota, List<Integer> generos,
                     String poster, Double scoreRecomendacao, String motivoRecomendacao,
                     Double similaridadeSinopse) {
             this(id, titulo, sinopse, nota, generos, poster, scoreRecomendacao,
-                    motivoRecomendacao, similaridadeSinopse, null);
+                    motivoRecomendacao, similaridadeSinopse, null, null);
         }
     }
 }

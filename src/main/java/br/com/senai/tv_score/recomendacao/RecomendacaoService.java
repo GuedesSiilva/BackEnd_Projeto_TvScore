@@ -107,7 +107,7 @@ public class RecomendacaoService {
             }
             return new RecomendacoesDTO.Item(item.id(), item.titulo(), item.sinopse(), item.nota(),
                     item.generos(), item.poster(), item.scoreRecomendacao(), item.motivoRecomendacao(),
-                    item.similaridadeSinopse(), tipo);
+                    item.similaridadeSinopse(), tipo, item.ano());
         }).toList();
         List<String> avisos = corpo.avisos() == null ? List.of() : corpo.avisos();
         if (avisos.stream().anyMatch(a -> a == null || a.isBlank())) throw invalida();
