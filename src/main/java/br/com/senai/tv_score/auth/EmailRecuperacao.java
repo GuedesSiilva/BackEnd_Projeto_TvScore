@@ -27,7 +27,11 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class EmailRecuperacao {
     private static final Logger LOG = LoggerFactory.getLogger(EmailRecuperacao.class);
-    private record Mensagem(String from, List<String> to, String subject, String text, String html) {
+    private record Remetente(String name, String email) {}
+    private record Destinatario(String email) {}
+
+    private record Mensagem(Remetente sender, List<Destinatario> to, String subject,
+                            String textContent, String htmlContent) {
         // RestClient inclui o corpo em logs de depuração via toString().
         @Override public String toString() { return "Mensagem de recuperação"; }
     }
@@ -45,8 +49,8 @@ public class EmailRecuperacao {
             @Value("${senha.reset.url:http://localhost:3000/redefinir-senha}") String base,
             @Value("${senha.reset.remetente:no-reply@localhost}") String remetente,
             @Value("${senha.reset.email-habilitado:false}") boolean habilitado,
-            @Value("${senha.reset.resend-api-key:}") String apiKey) {
-        this(base, remetente, habilitado, apiKey, clienteResend());
+            @Value("${senha.reset.brevo-api-key:}") String apiKey) {
+        this(base, remetente, habilitado, apiKey, clienteBrevo());
     }
 
     EmailRecuperacao(String base, String remetente, boolean habilitado, String apiKey, RestClient http) {
@@ -63,8 +67,9 @@ public class EmailRecuperacao {
             throw new IllegalArgumentException("Configure RESET_URL com HTTPS para habilitar a recuperação.");
         }
         if (habilitado && (apiKey.isBlank() || apiKey.chars().anyMatch(c -> c < 33 || c > 126)
-                || remetente.isBlank() || "no-reply@localhost".equalsIgnoreCase(remetente.strip()))) {
-            throw new IllegalArgumentException("Configure RESEND_API_KEY e RESET_REMETENTE para habilitar a recuperação.");
+                || !remetente.matches("[^\\s<>@,;]+@[^\\s<>@,;]+")
+                || "no-reply@localhost".equalsIgnoreCase(remetente))) {
+            throw new IllegalArgumentException("Configure BREVO_API_KEY e RESET_REMETENTE com um endereço de e-mail simples.");
         }
         this.base = uri;
         this.remetente = remetente;
@@ -73,13 +78,13 @@ public class EmailRecuperacao {
         this.http = http;
     }
 
-    private static RestClient clienteResend() {
+    private static RestClient clienteBrevo() {
         var factory = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(3))
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .build());
         factory.setReadTimeout(Duration.ofSeconds(5));
-        return RestClient.builder().baseUrl("https://api.resend.com").requestFactory(factory).build();
+        return RestClient.builder().baseUrl("https://api.brevo.com").requestFactory(factory).build();
     }
 
     public void enviar(String destinatario, String token, Instant expiraEm) {
@@ -129,10 +134,10 @@ public class EmailRecuperacao {
                 </div>
                 """.formatted(HtmlUtils.htmlEscape(logo), HtmlUtils.htmlEscape(link), validade);
         try {
-            var resposta = http.post().uri("/emails")
-                    .headers(headers -> headers.setBearerAuth(apiKey))
+            var resposta = http.post().uri("/v3/smtp/email")
+                    .headers(headers -> headers.set("api-key", apiKey))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new Mensagem(remetente, List.of(destinatario),
+                    .body(new Mensagem(new Remetente("TV Score", remetente), List.of(new Destinatario(destinatario)),
                             "Solicitação de redefinição de senha | TV Score", texto, html))
                     .retrieve()
                     .toBodilessEntity();
