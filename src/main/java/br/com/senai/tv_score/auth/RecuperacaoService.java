@@ -2,6 +2,8 @@ package br.com.senai.tv_score.auth;
 
 import br.com.senai.tv_score.usuarios.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,27 +37,36 @@ public class RecuperacaoService {
         limite.verificar("ip:" + hash(ip)); limite.verificar("email:" + hash(normalizado));
         byte[] bytes = new byte[32]; random.nextBytes(bytes);
         String bruto = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        String destinatario = tx.execute(status -> {
-            // SMTP nunca bloqueia esta chamada; limpeza periódica evita locks globais no pedido.
+        tx.executeWithoutResult(status -> {
             var encontrado = usuarios.findByEmailIgnoreCase(normalizado);
-            if (encontrado.isEmpty()) return null;
-            var usuario = usuarios.buscarPorIdComBloqueio(encontrado.get().getId()).orElseThrow();
+            if (encontrado.isEmpty()) return;
+            var usuario = usuarios.buscarPorIdComBloqueio(encontrado.get().getId()).orElse(null);
+            if (usuario == null) return;
             tokens.apagarDoUsuario(usuario.getId());
             ResetSenha reset = new ResetSenha(); reset.setUsuario(usuario); reset.setHash(hash(bruto));
-            reset.setCriadoEm(Instant.now()); reset.setExpiraEm(Instant.now().plusSeconds(validade));
-            tokens.save(reset); return usuario.getEmail();
+            Instant agora = Instant.now();
+            Instant expiraEm = agora.plusSeconds(validade);
+            reset.setCriadoEm(agora);
+            reset.setExpiraEm(expiraEm);
+            tokens.save(reset);
+            String destinatario = usuario.getEmail();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override public void afterCommit() {
+                    email.enviar(destinatario, bruto, expiraEm);
+                }
+            });
         });
-        if (destinatario != null) email.enviar(destinatario, bruto);
     }
     public void redefinir(String token, String novaSenha, String ip) {
         limite.verificar("reset-ip:" + hash(ip));
         PoliticaSenha.validar(novaSenha);
         if (token == null || !token.matches("[A-Za-z0-9_-]{43}")) throw invalido();
         tx.executeWithoutResult(status -> {
-            var primeiro = tokens.findByHash(hash(token)).orElseThrow(this::invalido);
+            String hashToken = hash(token);
+            var primeiro = tokens.findByHash(hashToken).orElseThrow(this::invalido);
             var usuario = usuarios.buscarPorIdComBloqueio(primeiro.getUsuario().getId()).orElseThrow(this::invalido);
-            // Reconsulta após lock; outro consumidor pode ter removido o token enquanto esperávamos.
-            if (tokens.consumir(hash(token), Instant.now()) != 1) throw invalido();
+            // A atualização condicional é a autoridade após adquirir o lock da conta.
+            if (tokens.consumir(hashToken, Instant.now()) != 1) throw invalido();
             if (encoder.matches(novaSenha, usuario.getSenha())) throw new IllegalArgumentException("A nova senha deve ser diferente da atual.");
             usuario.setSenha(encoder.encode(novaSenha));
             usuario.setVersaoCredenciais(Math.incrementExact(usuario.getVersaoCredenciais()));

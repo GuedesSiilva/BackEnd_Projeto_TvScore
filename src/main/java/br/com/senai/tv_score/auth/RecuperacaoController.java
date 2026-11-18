@@ -10,7 +10,9 @@ import java.util.Map;
 @RestController @RequestMapping("/api/auth/senha")
 public class RecuperacaoController {
     public record Pedido(@NotBlank @Email @Size(max=254) String email) {}
-    public record Redefinicao(@NotNull @Size(max=100) String token, @NotNull String novaSenha) {}
+    public record Redefinicao(@NotNull @Size(max=100) String token, @NotNull String novaSenha) {
+        @Override public String toString() { return "Redefinição de senha"; }
+    }
     private final RecuperacaoService service;
     public RecuperacaoController(RecuperacaoService service) { this.service = service; }
     @PostMapping("/recuperacao") @ResponseStatus(HttpStatus.ACCEPTED)

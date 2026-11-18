@@ -6,10 +6,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import java.time.Instant;
 import java.util.concurrent.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 @SpringBootTest
 class SegurancaSenhaTest {
     @Autowired UsuarioRepository usuarios;
@@ -19,6 +24,7 @@ class SegurancaSenhaTest {
     @Autowired PasswordEncoder encoder;
     @Autowired JwtService jwt;
     @Autowired FotoService fotos;
+    @Autowired PlatformTransactionManager transacoes;
     @MockitoBean EmailRecuperacao email;
     @Autowired org.springframework.web.context.WebApplicationContext contexto;
     @Autowired @org.springframework.beans.factory.annotation.Qualifier("springSecurityFilterChain") jakarta.servlet.Filter seguranca;
@@ -44,16 +50,50 @@ class SegurancaSenhaTest {
     private String emitir(String ip) {
         recuperacao.solicitar(u.getEmail(),ip);
         var captor=org.mockito.ArgumentCaptor.forClass(String.class);
-        verify(email).enviar(eq(u.getEmail()),captor.capture());
+        verify(email).enviar(eq(u.getEmail()),captor.capture(),any(Instant.class));
         return captor.getValue();
     }
-    @Test void resetGuardaSomenteHashEImpedeReplay() {
+    @Test void resetGuardaSomenteHashEImpedeReplay() throws Exception {
         String token=emitir("127.1.0.1");
         var registro=tokens.findByHash(RecuperacaoService.hash(token)).orElseThrow();
         assertNotEquals(token,registro.getHash());
-        recuperacao.redefinir(token,"nova12345","127.1.0.2");
-        assertThrows(ResponseStatusException.class,()->recuperacao.redefinir(token,"outra12345","127.1.0.3"));
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(contexto)
+                .addFilters(seguranca).build();
+        String corpo = "{\"token\":\"%s\",\"novaSenha\":\"nova12345\"}".formatted(token);
+        mvc.perform(post("/api/auth/senha/redefinicao").contentType("application/json").content(corpo))
+                .andExpect(status().isNoContent());
+        mvc.perform(post("/api/auth/senha/redefinicao").contentType("application/json").content(corpo))
+                .andExpect(status().isBadRequest());
         assertEquals(1,usuarios.findById(u.getId()).orElseThrow().getVersaoCredenciais());
+    }
+    @Test void soEnfileiraDepoisDoCommitExterno() {
+        var tx = new TransactionTemplate(transacoes);
+        tx.executeWithoutResult(status -> {
+            recuperacao.solicitar(u.getEmail(), "127.4.0.1");
+            verifyNoInteractions(email);
+            status.setRollbackOnly();
+        });
+        verifyNoInteractions(email);
+        tx.executeWithoutResult(status -> {
+            recuperacao.solicitar(u.getEmail(), "127.4.0.2");
+            verifyNoInteractions(email);
+        });
+        var bruto = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(email).enviar(eq(u.getEmail()), bruto.capture(), any(Instant.class));
+        assertTrue(tokens.findByHash(RecuperacaoService.hash(bruto.getValue())).isPresent());
+    }
+
+    @Test void falhaAposConsumoReverteTokenESenha() {
+        String token = emitir("127.5.0.1");
+        assertThrows(IllegalArgumentException.class,
+                () -> recuperacao.redefinir(token, "antiga123", "127.5.0.2"));
+        var registro = tokens.findByHash(RecuperacaoService.hash(token)).orElseThrow();
+        assertNull(registro.getConsumidoEm());
+        var usuario = usuarios.findById(u.getId()).orElseThrow();
+        assertTrue(encoder.matches("antiga123", usuario.getSenha()));
+        assertEquals(0, usuario.getVersaoCredenciais());
+        recuperacao.redefinir(token, "nova12345", "127.5.0.3");
+        assertTrue(encoder.matches("nova12345", usuarios.findById(u.getId()).orElseThrow().getSenha()));
     }
     @Test void apenasUmConsumoConcorrente() throws Exception {
         String token=emitir("127.2.0.1");
