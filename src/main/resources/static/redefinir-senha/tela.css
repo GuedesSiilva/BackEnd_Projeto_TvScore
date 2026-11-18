@@ -1,0 +1,53 @@
+:root {
+  color-scheme: dark;
+  --fundo: #080f1e;
+  --texto: #f4f5fb;
+  --suave: #aeb9cb;
+  --azul: #4d8cff;
+  --dourado: #eec15e;
+  font-family: system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: radial-gradient(ellipse at top, #142b50, transparent 58%), var(--fundo);
+  color: var(--texto);
+}
+
+.painel {
+  width: min(100%, 460px);
+  padding: clamp(24px, 6vw, 40px);
+  border: 1px solid #ffffff26;
+  border-radius: 24px;
+  background: #0d172b;
+  box-shadow: 0 24px 64px #0006;
+}
+
+.marca { margin: 0 0 24px; font-size: 24px; font-weight: 800; letter-spacing: -1px; }
+.marca span { color: var(--dourado); margin-right: 6px; }
+.marca b { font-weight: 500; }
+h1 { margin: 0; font-size: clamp(28px, 7vw, 38px); letter-spacing: -.04em; }
+.descricao, .ajuda { color: var(--suave); }
+.descricao { margin: 8px 0 24px; }
+.ajuda { margin: 8px 0 18px; font-size: .875rem; }
+label { display: block; margin-bottom: 8px; font-weight: 600; }
+
+input, button {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  font: inherit;
+}
+
+input { background: var(--fundo); color: var(--texto); border: 1px solid #51617d; padding: 10px 12px; }
+button { margin-top: 20px; padding: 12px; border: 0; background: var(--azul); color: var(--fundo); font-weight: 750; cursor: pointer; }
+button:disabled { opacity: .65; cursor: wait; }
+:focus-visible { outline: 2px solid var(--dourado); outline-offset: 4px; }
+#mensagem { margin: 16px 0 0; line-height: 1.5; }
+#mensagem:empty { margin: 0; }
