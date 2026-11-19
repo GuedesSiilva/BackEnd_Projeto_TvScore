@@ -15,7 +15,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 @SpringBootTest
@@ -33,6 +35,29 @@ class SegurancaSenhaTest {
     @Autowired @org.springframework.beans.factory.annotation.Qualifier("springSecurityFilterChain") jakarta.servlet.Filter seguranca;
     Usuario u;
     @BeforeEach void criar() { u=usuarios.saveAndFlush(new Usuario("Teste",java.util.UUID.randomUUID()+"@example.test",encoder.encode("antiga123"))); }
+    @ParameterizedTest
+    @ValueSource(strings = {"https://tvscore.pages.dev", "http://localhost:5173", "http://127.0.0.1:5173"})
+    void preflightPermiteFlutterWebSemJwt(String origem) throws Exception {
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(contexto)
+                .addFilters(seguranca).build();
+        mvc.perform(options("/api/usuarios/eu")
+                        .header("Origin", origem)
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", origem));
+    }
+
+    @Test void preflightBloqueiaOutroProjetoPages() throws Exception {
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(contexto)
+                .addFilters(seguranca).build();
+        mvc.perform(options("/api/usuarios/eu")
+                        .header("Origin", "https://outro-projeto.pages.dev")
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+
     @Test void trocaRevogaTokensEValidaSemMutar() {
         String anterior=jwt.gerarToken(u.getId());
         assertThrows(ResponseStatusException.class,()->senhas.alterar(u,new AlterarSenhaRequest("errada","nova12345")));
