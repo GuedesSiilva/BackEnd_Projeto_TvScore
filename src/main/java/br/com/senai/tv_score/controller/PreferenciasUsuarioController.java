@@ -1,5 +1,7 @@
 package br.com.senai.tv_score.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+
 import br.com.senai.tv_score.dto.PreferenciasGenerosRequestDTO;
 import br.com.senai.tv_score.dto.PreferenciasGenerosResponseDTO;
 import br.com.senai.tv_score.usuarios.PreferenciasUsuarioService;
@@ -22,6 +24,7 @@ public class PreferenciasUsuarioController {
     }
 
     @GetMapping
+    @Operation(summary = "Consultar meus gêneros preferidos")
     public ResponseEntity<PreferenciasGenerosResponseDTO> consultar(
             @AuthenticationPrincipal Usuario usuario
     ) {
@@ -31,6 +34,7 @@ public class PreferenciasUsuarioController {
     }
 
     @PutMapping
+    @Operation(summary = "Salvar meus gêneros preferidos")
     public ResponseEntity<PreferenciasGenerosResponseDTO> salvar(
             @AuthenticationPrincipal Usuario usuario,
             @Valid @RequestBody PreferenciasGenerosRequestDTO dto

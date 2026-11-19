@@ -1,5 +1,7 @@
 package br.com.senai.tv_score.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+
 import br.com.senai.tv_score.auth.UsuarioLogadoResponse;
 import br.com.senai.tv_score.dto.AtualizarUsuarioDTO;
 import br.com.senai.tv_score.dto.ExcluirContaDTO;
@@ -23,6 +25,7 @@ public class UsuariosController {
     }
 
     @GetMapping("/eu")
+    @Operation(summary = "Consultar meu perfil")
     public UsuarioLogadoResponse usuarioLogado(
             @AuthenticationPrincipal Usuario usuario
     ) {
@@ -33,6 +36,7 @@ public class UsuariosController {
     }
 
     @PutMapping("/eu")
+    @Operation(summary = "Atualizar meu perfil")
     public UsuarioLogadoResponse atualizarUsuario(
             @AuthenticationPrincipal Usuario usuario,
             @Valid @RequestBody AtualizarUsuarioDTO dto
@@ -42,6 +46,7 @@ public class UsuariosController {
 
     @DeleteMapping("/eu")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Excluir minha conta")
     public void excluirConta(
             @AuthenticationPrincipal Usuario usuario,
             @Valid @RequestBody ExcluirContaDTO dto

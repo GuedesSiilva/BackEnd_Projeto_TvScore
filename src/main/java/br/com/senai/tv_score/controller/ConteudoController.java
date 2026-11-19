@@ -1,5 +1,7 @@
 package br.com.senai.tv_score.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+
 import br.com.senai.tv_score.dto.GeneroConteudoDTO;
 import br.com.senai.tv_score.dto.TmdbResponseDTO;
 import br.com.senai.tv_score.filme.FilmeService;
@@ -19,6 +21,7 @@ public class ConteudoController {
     }
 
     @GetMapping("/generos")
+    @Operation(summary = "Listar gêneros de filmes e séries")
     public ResponseEntity<List<GeneroConteudoDTO>> listarGeneros() {
         return ResponseEntity.ok(
                 filmeService.listarGenerosConteudo()
@@ -26,6 +29,7 @@ public class ConteudoController {
     }
 
     @GetMapping("/por-genero")
+    @Operation(summary = "Buscar filmes e séries por gênero")
     public ResponseEntity<TmdbResponseDTO> buscarPorGenero(
             @RequestParam("genero") String genero,
             @RequestParam(name = "pagina", defaultValue = "1")

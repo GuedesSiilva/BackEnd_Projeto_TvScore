@@ -1,4 +1,6 @@
 package br.com.senai.tv_score.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +14,7 @@ public class FotoLocalController {
     private final Path raiz;
     public FotoLocalController(@Value("${foto.local.diretorio:./fotos-dev}") String diretorio){raiz=Path.of(diretorio).toAbsolutePath().normalize();}
     @GetMapping("/api/fotos/{chave}")
+    @Operation(summary = "Consultar uma foto armazenada localmente")
     public ResponseEntity<FileSystemResource> ler(@PathVariable String chave) {
         if(!chave.matches("[a-f0-9-]{36}\\.png"))throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Foto não encontrada.");
         Path arquivo=raiz.resolve(chave).normalize();

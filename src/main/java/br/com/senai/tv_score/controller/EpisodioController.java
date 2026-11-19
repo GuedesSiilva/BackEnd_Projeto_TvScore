@@ -1,5 +1,7 @@
 package br.com.senai.tv_score.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+
 import br.com.senai.tv_score.dto.EpisodioDTO;
 import br.com.senai.tv_score.dto.PainelEpisodiosDTO;
 import br.com.senai.tv_score.dto.TemporadaDTO;
@@ -17,6 +19,7 @@ public class EpisodioController {
     }
 
     @GetMapping("/{serieId}/episodios/painel")
+    @Operation(summary = "Consultar o painel de episódios de uma série")
     public PainelEpisodiosDTO buscarPainel(
             @PathVariable("serieId") Long serieId,
             @RequestParam(name = "limite", defaultValue = "10")
@@ -35,6 +38,7 @@ public class EpisodioController {
     }
 
     @GetMapping("/{serieId}/temporadas/{temporada}")
+    @Operation(summary = "Consultar uma temporada e seus episódios")
     public TemporadaDTO buscarTemporada(
             @PathVariable("serieId") Long serieId,
             @PathVariable("temporada") int temporada
@@ -46,6 +50,7 @@ public class EpisodioController {
     }
 
     @GetMapping("/{serieId}/temporadas/{temporada}/episodios/{episodio}")
+    @Operation(summary = "Consultar os detalhes de um episódio")
     public EpisodioDTO buscarDetalhes(
             @PathVariable("serieId") Long serieId,
             @PathVariable("temporada") int temporada,
@@ -59,6 +64,7 @@ public class EpisodioController {
     }
 
     @GetMapping("/{serieId}/episodios/grade")
+    @Operation(summary = "Consultar a grade de episódios de uma série")
     public br.com.senai.tv_score.dto.GradeEpisodiosDTO grade(@PathVariable Long serieId,
             @RequestParam(defaultValue = "false") boolean incluirEspeciais) {
         var temporadas = episodioService.carregarTemporadas(serieId, incluirEspeciais);
@@ -68,6 +74,7 @@ public class EpisodioController {
                 e.temporada(), e.numero(), e.nota(), e.quantidadeVotos(), e.dataExibicao())).toList());
     }
     @GetMapping("/{serieId}/episodios/ranking")
+    @Operation(summary = "Consultar o ranking de episódios de uma série")
     public java.util.List<EpisodioDTO> ranking(@PathVariable Long serieId,
             @RequestParam(defaultValue = "10") int limite,
             @RequestParam(defaultValue = "1") int minimoVotos,

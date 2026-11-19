@@ -1,4 +1,6 @@
 package br.com.senai.tv_score.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
 import br.com.senai.tv_score.usuarios.*;
 import br.com.senai.tv_score.auth.UsuarioLogadoResponse;
 import org.springframework.web.bind.annotation.*;
@@ -15,5 +17,6 @@ public class FotoController {
         return new UsuarioLogadoResponse(usuario.getNome(),usuario.getEmail(),fotos.atualizar(usuario,arquivo));
     }
     @DeleteMapping @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Remover minha foto de perfil")
     public void remover(@AuthenticationPrincipal Usuario usuario) { fotos.remover(usuario); }
 }

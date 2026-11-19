@@ -1,5 +1,7 @@
 package br.com.senai.tv_score.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+
 import br.com.senai.tv_score.dto.RecomendacoesDTO;
 import br.com.senai.tv_score.recomendacao.RecomendacaoService;
 import org.springframework.http.CacheControl;
@@ -20,6 +22,7 @@ public class RecomendacaoController {
     }
 
     @GetMapping("/filmes")
+    @Operation(summary = "Obter recomendações personalizadas de filmes")
     public ResponseEntity<RecomendacoesDTO> buscarFilmes(
             @RequestHeader(HttpHeaders.AUTHORIZATION)
             String authorization
@@ -29,6 +32,7 @@ public class RecomendacaoController {
                 .body(recomendacaoService.buscarFilmes(authorization));
     }
     @GetMapping("/series")
+    @Operation(summary = "Obter recomendações personalizadas de séries")
     public ResponseEntity<RecomendacoesDTO> buscarSeries(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(recomendacaoService.buscarSeries(authorization));
     }

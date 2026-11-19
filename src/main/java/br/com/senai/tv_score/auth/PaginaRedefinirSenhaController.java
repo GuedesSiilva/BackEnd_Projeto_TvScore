@@ -1,5 +1,7 @@
 package br.com.senai.tv_score.auth;
 
+import io.swagger.v3.oas.annotations.Operation;
+
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PaginaRedefinirSenhaController {
 
     @GetMapping("/redefinir-senha")
+    @Operation(summary = "Abrir a página de redefinição de senha")
     public ResponseEntity<Resource> pagina() {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("text/html; charset=UTF-8"))

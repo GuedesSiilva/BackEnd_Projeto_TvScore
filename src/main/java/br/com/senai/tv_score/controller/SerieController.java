@@ -1,5 +1,7 @@
 package br.com.senai.tv_score.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+
 import br.com.senai.tv_score.dto.FilmeDTO;
 import br.com.senai.tv_score.dto.TmdbResponseDTO;
 import br.com.senai.tv_score.filme.FilmeService;
@@ -17,6 +19,7 @@ public class SerieController {
     }
 
     @GetMapping("/em-alta")
+    @Operation(summary = "Listar séries em alta")
     public ResponseEntity<TmdbResponseDTO> buscarEmAlta(
             @RequestParam(name = "pagina", defaultValue = "1")
             int pagina
@@ -28,6 +31,7 @@ public class SerieController {
 
 
 @GetMapping("/por-nota")
+@Operation(summary = "Listar séries por nota")
 public ResponseEntity<TmdbResponseDTO> buscarSeriesPorNota(
         @RequestParam(name = "minima", defaultValue = "0") double minima,
         @RequestParam(name = "maxima", defaultValue = "10") double maxima,
@@ -40,6 +44,7 @@ public ResponseEntity<TmdbResponseDTO> buscarSeriesPorNota(
 
 
     @GetMapping("/{id}")
+    @Operation(summary = "Consultar os detalhes de uma série")
     public ResponseEntity<FilmeDTO> buscarDetalhes(
             @PathVariable("id") Long id
     ) {
